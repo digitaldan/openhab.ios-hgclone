@@ -1,0 +1,87 @@
+/* 
+  File.strings
+//  openHAB iOS User Interface
+//  Copyright © 2011 Pablo Romeu
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+"labelDonation"="Wenn Sie diese App mögen, betrachten bitte eine Spende an die App-Programmierer";
+"MainLabelDonation"="Spenden Sie für die Anwendung zu unterstützen helfen";
+"Donations"="Spenden";
+"Thanks"="Vielen Dank für Ihre Spende! Sie können spenden mehr, wenn Sie möchten...";
+"Buy failed"="Buy fehlgeschlagen";
+"You cannot buy"="Sie können zu diesem Zeitpunkt nicht kaufen";
+"Your donation right1"="Ihre Spende von %@ fertig korrekt. Vielen Dank!";
+"Donation failed"="Ihre Spende an Prozess fehlgeschlagen";
+
+
+"Stats3"="Requests: %i ~ Übertragene Datenmenge: %.2f KB ~ Bilder im Cache: %i";
+"labelServer"="URL";
+"labelRefresh"="Sitemap Refresh (s)";
+"labelSitemap"="Sitemap";
+"labelMaxConnections"="Max. Verbindungen";
+"STOP"="Stopp";
+"UP"="Hoch";
+"DOWN"="Runter";
+"OpenHAB"="openHAB";
+"BuildingInterface"="Aktualisiere die Oberfläche";
+"Alldone"="Alle Requests beendet";
+"ParserFormat2"="Fehler beim Parsen von JSON in der Phase %@. Meldung des Parsers: %@";
+"ImageRefreshed1"="Aktualisiere Bilder, %.0f verbleibend";
+"ItemsRefreshed"="Items aktualisiert";
+"SitemapLoaded"="Sitemap geladen";
+"LoadingSitemap"="Lade die Sitemap";
+"LoadingGroups"="Lade die Gruppen";
+"Refreshing"="Aktualisiere";
+"LoadingItems"="Lade Items";
+"Master"="Hauptmenü";
+"Detail"="openHAB Menü";
+"Loading"="Lade";
+"Menu"="Menü";
+"SetUrl"="Konfiguration der Server-URL";
+"SetSitemap"="Konfiguration der Sitemap";
+"Configuration"="Konfiguration";
+"Info"="Info";
+"ErrorSitemapConfig"="Es sind Fehler in der Sitemap-Konfiguration";
+"LoadingSitemapUrl2"="Lade URL: %@ Sitemap:%@";
+"InfoText"="© 2011 Pablo Romeu
+
+Die vollständige Version erhalten Sie hier: http:\/\/itunes.apple.com\/us\/app\/openhab\/id492054521?l=de&ls=1&mt=8
+
+Dieses Programm ist ein Client für openHAB, welches unter http:\/\/openhab.org verfügbar ist. Für Support bzgl. openHAB besuchen Sie bitte die openHAB Homepage.
+
+Das open Home Automation Bus (openHAB) Projekt dient als universale Integrationsplattform für alle Dinge rund um Heimautomatisierung.
+
+Es ist absolut Hardwarehersteller-unabhängig als auch Protokoll-agnostisch ausgelegt. openHAB bringt verschiedene Bussysteme, Hardwäregeräte und Interface-Protokolle durch optional zu installierende Bindings zusammen. Diese Bindings senden und empfangen Kommandos und Statusupdates über den openHAB Event Bus. Dieses Konzept erlaubt es, eine einheitliche Benutzerschnittstelle mit durchgängigem Look&Feel anzubieten, obwohl dadurch Geräte ganz unterschiedlicher Natur und Technologie gesteuert werden. Neben der Benutzerschnittstelle bietet openHAB weiterhin die Möglichkeit, komplexe Automatisierungsregeln systemübergreifend zu definieren.
+
+Hier ein paar Beispiele für gegenwärtig verfügbare Bindings (Aktuelle Liste ist auf der Projekthomepage verfügbar):
+
+KNX
+1-wire
+Bluetooth
+Wake-on-LAN
+Network availability check
+Commandline support
+RS-232
+HTTP
+AVM Fritz!Box
+Network Time Protocol (NTP)
+MPD (Music Player Deamon)
+VDR
+Asterisk
+
+openHAB ist OpenSource unter der GPL v3 Lizenz.
+
+Dieses Programm nutzt MBProgressHUD von Matej Bukovinski, welches unter der MIT License steht.";

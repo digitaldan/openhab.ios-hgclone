@@ -1,0 +1,84 @@
+/* 
+  File.strings
+//  openHAB iOS User Interface
+//  Copyright © 2011 Pablo Romeu
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+"labelDonation"="If you like this app, please consider making a donation to the app's programmer";
+"MainLabelDonation"="Donate to help the application's support";
+"Donations"="Donations";
+"Thanks"="Thanks for your donation! You can donate more if you wish...";
+"Buy failed"="Buy failed";
+"You cannot buy"="You cannot buy at this time";
+"Your donation right1"="Your donation of %@ finished correctly. Thank you!";
+"Donation failed"="Your donation failed to process";
+
+"Stats3"="Requests: %i ~ Size Downloaded: %.2f KB ~ Images Cached: %i";
+"labelServer"="URL";
+"labelRefresh"="Refresh sitemap (s)";
+"labelSitemap"="Sitemap";
+"labelMaxConnections"="Max. connections";
+"STOP"="Stop";
+"UP"="Up";
+"DOWN"="Down";
+"OpenHAB"="openHAB";
+"BuildingInterface"="Updating the User Interface";
+"Alldone"="All requests finished";
+"ParserFormat2"="Error in JSON parsing phase %@. the parser said: %@";
+"ImageRefreshed1"="Refreshed image, %.0f remaining";
+"ItemsRefreshed"="Items Refreshed";
+"SitemapLoaded"="Sitemap Loaded";
+"LoadingSitemap"="Loading the Sitemap";
+"LoadingGroups"="Loading Groups";
+"Refreshing"="Refreshing";
+"LoadingItems"="Loading items";
+"Master"="Main Menu";
+"Detail"="openHAB Menu";
+"Loading"="Loading";
+"Menu"="Menu";
+"SetUrl"="Configure the url of the server";
+"SetSitemap"="Configure the sitemap";
+"Configuration"="Configuration";
+"Info"="About";
+"ErrorSitemapConfig"="You have an error in the sitemap configuration";
+"LoadingSitemapUrl2"="Loading URL: %@ sitemap:%@";
+"InfoText"=" © 2011 Pablo Romeu
+
+Full version might be obtained here: http:\/\/itunes.apple.com\/us\/app\/openhab\/id492054521?l=es&ls=1&mt=8
+
+This program is a client for openHAB system which can be found at http:\/\/openhab.org. For support on openHAB please visit openHAB home page.
+
+The open Home Automation Bus (openHAB) project aims at providing a universal integration platform for all things around home automation.
+
+It is designed to be absolutely vendor-neutral as well as hardware\/protocol-agnostic. openHAB brings together different bus systems, hardware devices and interface protocols by dedicated bindings. These bindings send and receive commands and status updates on the openHAB event bus. This concept allows designing user interfaces with a unique look&feel, but with the possibility to operate devices based on a big number of different technologies. Besides the user interfaces, it also brings the power of automation logics across different system boundaries.
+
+At the time this text is written there are many different hardware/protocol bindings available in openHAB:
+
+KNX
+1-wire
+Bluetooth
+Wake-on-LAN
+Network availability check
+Commandline support
+RS-232
+HTTP
+AVM Fritz!Box
+Network Time Protocol (NTP)
+MPD (Music Player Deamon)
+
+openHAB is OpenSource licensed under GPL v3. You may find the source code at http:\/\/openhab.org
+
+This program uses MBProgressHUD licensed under MIT license by Matej Bukovinski";
