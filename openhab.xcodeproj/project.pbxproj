@@ -40,11 +40,11 @@
 		6E5C196A149B6C0400679CEA /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 6E5C196C149B6C0400679CEA /* Localizable.strings */; };
 		6E5C1971149B6EDB00679CEA /* openhabItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E5C1970149B6EDB00679CEA /* openhabItem.m */; };
 		6E5C1975149B703300679CEA /* commLibrary.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E5C1974149B703300679CEA /* commLibrary.m */; };
-		6E5C1977149B745F00679CEA /* notas in Resources */ = {isa = PBXBuildFile; fileRef = 6E5C1976149B745E00679CEA /* notas */; };
 		6E5C197D149B8A6A00679CEA /* requestQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E5C197C149B8A6A00679CEA /* requestQueue.m */; };
 		6E5C1980149B983200679CEA /* openhab.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E5C197F149B983200679CEA /* openhab.m */; };
 		6E6BA379149C905A00202806 /* openhabWidget.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E6BA378149C905A00202806 /* openhabWidget.m */; };
 		6E90D8BE14A354FB00E9CF15 /* MBProgressHUD.m in Sources */ = {isa = PBXBuildFile; fileRef = 6E90D8BD14A354FB00E9CF15 /* MBProgressHUD.m */; };
+		6EA308F214BEF308005B972C /* notes in Resources */ = {isa = PBXBuildFile; fileRef = 6EA308F114BEF308005B972C /* notes */; };
 		6EB5072814A4D7DC00881D53 /* openhabTebleViewCellSelectionDetail.m in Sources */ = {isa = PBXBuildFile; fileRef = 6EB5072714A4D7DC00881D53 /* openhabTebleViewCellSelectionDetail.m */; };
 		6EB5073214A5C1B600881D53 /* openhabImage.m in Sources */ = {isa = PBXBuildFile; fileRef = 6EB5073114A5C1B500881D53 /* openhabImage.m */; };
 		6EB88EF114A4569300246A60 /* openhabMapping.m in Sources */ = {isa = PBXBuildFile; fileRef = 6EB88EF014A4569300246A60 /* openhabMapping.m */; };
@@ -117,7 +117,6 @@
 		6E5C1970149B6EDB00679CEA /* openhabItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = openhabItem.m; sourceTree = "<group>"; };
 		6E5C1973149B703300679CEA /* commLibrary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = commLibrary.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		6E5C1974149B703300679CEA /* commLibrary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = commLibrary.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
-		6E5C1976149B745E00679CEA /* notas */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = notas; sourceTree = "<group>"; };
 		6E5C197B149B8A6A00679CEA /* requestQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = requestQueue.h; sourceTree = "<group>"; };
 		6E5C197C149B8A6A00679CEA /* requestQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = requestQueue.m; sourceTree = "<group>"; };
 		6E5C197E149B983200679CEA /* openhab.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = openhab.h; sourceTree = "<group>"; };
@@ -128,6 +127,7 @@
 		6E90D8BD14A354FB00E9CF15 /* MBProgressHUD.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MBProgressHUD.m; sourceTree = "<group>"; };
 		6E95C6BA14AD227A000F2A38 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		6E95C6BB14AD2284000F2A38 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; lineEnding = 0; name = de; path = de.lproj/Localizable.strings; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.simpleColoring; };
+		6EA308F114BEF308005B972C /* notes */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = notes; sourceTree = "<group>"; };
 		6EB5072614A4D7DC00881D53 /* openhabTebleViewCellSelectionDetail.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = openhabTebleViewCellSelectionDetail.h; sourceTree = "<group>"; };
 		6EB5072714A4D7DC00881D53 /* openhabTebleViewCellSelectionDetail.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = openhabTebleViewCellSelectionDetail.m; sourceTree = "<group>"; };
 		6EB5073014A5C1B500881D53 /* openhabImage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = openhabImage.h; sourceTree = "<group>"; };
@@ -281,7 +281,7 @@
 		6E5C190F149B695400679CEA = {
 			isa = PBXGroup;
 			children = (
-				6E5C1976149B745E00679CEA /* notas */,
+				6EA308F114BEF308005B972C /* notes */,
 				6E5C192D149B695500679CEA /* openhabAppDelegate.h */,
 				6E5C192E149B695500679CEA /* openhabAppDelegate.m */,
 				6E5C1924149B695500679CEA /* openhab */,
@@ -473,7 +473,6 @@
 				6E5C1929149B695500679CEA /* InfoPlist.strings in Resources */,
 				6E5C194B149B6A7E00679CEA /* data.plist in Resources */,
 				6E5C196A149B6C0400679CEA /* Localizable.strings in Resources */,
-				6E5C1977149B745F00679CEA /* notas in Resources */,
 				6E4F29C6149E568F004CE15D /* Default@2x.png in Resources */,
 				6E4F29C7149E568F004CE15D /* Default.png in Resources */,
 				6E4F29C8149E568F004CE15D /* Default-Portrait~ipad.png in Resources */,
@@ -484,6 +483,7 @@
 				6E12FB5214ADD8A100912CD1 /* DOWN.png in Resources */,
 				6E12FB5314ADD8A100912CD1 /* UP.png in Resources */,
 				6E12FB5714ADDF9700912CD1 /* STOP.png in Resources */,
+				6EA308F214BEF308005B972C /* notes in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
