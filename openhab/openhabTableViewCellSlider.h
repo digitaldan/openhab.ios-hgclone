@@ -21,9 +21,13 @@
 @interface openhabTableViewCellSlider : openhabTableViewCell
 {
 	__weak IBOutlet UISlider * theSlider;
+	__weak IBOutlet UILabel *detailLabel;
 }
 
 
-@property (nonatomic,weak)IBOutlet UISlider * theSlider;
+@property (atomic,weak)IBOutlet UISlider * theSlider;
+@property (nonatomic,weak)IBOutlet UILabel *detailLabel;
+@property (nonatomic,weak)NSTimer*theTimer;
 @property (nonatomic)int times;
+@property (nonatomic)BOOL sliding;
 @end

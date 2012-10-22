@@ -26,8 +26,7 @@
     [super loadWidget:theWidget];
     if ([theWidget.item.state rangeOfString:@"Undefined"].location==NSNotFound)
     {
-		int index=[theWidget.item.state intValue];
-		openhabMapping*mapping=(openhabMapping*)[theWidget.mappings objectAtIndex:index];
+		openhabMapping*mapping=(openhabMapping*)[theWidget.mappings objectForKey:theWidget.item.state];
         [detailLabel setText:[mapping label]];
     }
     else

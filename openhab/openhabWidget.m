@@ -19,7 +19,7 @@
 #import "openhabWidget.h"
 
 @implementation openhabWidget
-@synthesize type,label,icon,imageURL,Image,data,item,widgets,mappings,iconImage;
+@synthesize type,label,icon,imageURL,Image,data,item,widgets,mappings,iconImage,linkedPage,theWidgetUrl,service,period,refresh,height;
 
 #pragma mark - init method
 
@@ -34,9 +34,15 @@
     [self setIconImage:nil];
 	[self setImage:nil];
 	[self setImageURL:nil];
+	[self setTheWidgetUrl:nil];
+	[self setHeight:0];
 	[self setWidgets:[[NSMutableArray alloc] initWithCapacity:0]];
-    [self setMappings:[[NSMutableArray alloc] initWithCapacity:0]];
-
+    [self setMappings:[[NSMutableDictionary alloc] initWithCapacity:0]];
+	[self setLinkedPage:[[dictionary objectForKey:@"linkedPage"] objectForKey:@"id"]];
+	[self setService:[dictionary objectForKey:@"service"]];
+	[self setPeriod:[dictionary objectForKey:@"period"]];
+	[self setRefresh:0];
+	
     // Copy the localized part of the label inside "[...]"
     NSRange begin=[self.label rangeOfString:@"["];
     
@@ -59,12 +65,39 @@
 
 - (NSString*)description
 {
-    NSMutableString* text=[NSString stringWithFormat:@"type: %@,label: %@,icon: %@,item: %@.",type,label,icon,item];
+    NSMutableString* text=[NSString stringWithFormat:@"type: %@,label: %@,icon: %@,item: %@.\n",type,label,icon,item];
     for (openhabWidget*widget in self.widgets) {
-        text=(NSMutableString*)[text stringByAppendingFormat:@"--->:%@    %@",self.label,[widget description]];
+        text=(NSMutableString*)[text stringByAppendingFormat:@"widget --->:%@    %@\n",[widget label],[widget description]];
     }
     return text;
 }
+-(openhabWidget*)copy
+{
+	openhabWidget*new=[openhabWidget new];
+	new.type=[self.type copy];
+	new.label=[self.label copy];
+	new.icon=[self.icon copy];
+	new.linkedPage=[self.linkedPage copy]; // v1.2
+	new.iconImage=[self.iconImage copy];
+	new.Image=[self.Image copy];
+	new.imageURL=[self.imageURL copy];
+	new.item=[self.item copy];
+	new.widgets=[self.widgets copy];
+	new.mappings=[self.mappings copy];
+	new.data=[self.data copy];
+	new.theWidgetUrl=[self.theWidgetUrl copy]; // v1.2
+	new.sendFrequency=self.sendFrequency;
+	new.minValue=self.minValue;
+	new.maxValue=self.maxValue;
+	new.step=self.step;	// v1.2 Sliders may have send frequency
+	// and setpoint values
+	new.height=self.height; // V1.2 Might have height value
+	new.service=[self.service copy];
+	new.period=[self.period copy];
+	new.refresh=self.refresh;
+	return new;
+}
+
 -(NSString*)structure
 {
     NSMutableString* text=[NSString stringWithFormat:@"--->%@",label];
@@ -81,7 +114,7 @@
 
 -(NSInteger)widgetType
 {
-    // itemTypes: Switch | Selection | Slider | List
+    // itemTypes: Switch | Selection | Slider | List | Setpoint |WebView | Video | chart
     //groupWidgettypes itemTypes: Text | Group | Image | Frame
     // 0 for unknown type
 	
@@ -101,9 +134,9 @@
 		if (self.item) // This is a rollershutter
 			if ([self.item.type isEqualToString:@"RollershutterItem"])
 			{		
-				[self.mappings addObject:[[openhabMapping alloc] initwithStrings:@"DOWN" label:@"DOWN"]];
-				[self.mappings addObject:[[openhabMapping alloc] initwithStrings:@"STOP" label:@"STOP"]];
-				[self.mappings addObject:[[openhabMapping alloc] initwithStrings:@"UP" label:@"UP"]];
+				[self.mappings setObject:[[openhabMapping alloc] initwithStrings:@"DOWN" label:@"DOWN"] forKey:@"DOWN"] ;
+				[self.mappings setObject:[[openhabMapping alloc] initwithStrings:@"STOP" label:@"STOP"] forKey:@"STOP"];
+				[self.mappings setObject:[[openhabMapping alloc] initwithStrings:@"UP" label:@"UP"] forKey:@"UP"];
 				return 4;
 			}
         return 1;
@@ -142,6 +175,29 @@
     {
         return 8;
     }
+	// v1.2 Setpoint
+	else if ([self.type rangeOfString:@"Setpoint"].location!=NSNotFound)
+    {
+		// We map the two buttons
+		if ([self.mappings count]==0)
+		{
+			[self.mappings setObject:[[openhabMapping alloc] initwithStrings:@"DOWN" label:@"DOWN"] forKey:@"DOWN"];
+			[self.mappings setObject:[[openhabMapping alloc] initwithStrings:@"UP" label:@"UP"] forKey:@"UP"];
+		}
+        return 11;
+    }
+	else if ([self.type rangeOfString:@"Webview"].location!=NSNotFound)
+	{
+		return 12;
+	}
+	else if ([self.type rangeOfString:@"Video"].location!=NSNotFound)
+	{
+		return 14;
+	}
+	else if ([self.type rangeOfString:@"Chart"].location!=NSNotFound)
+	{
+		return 16;
+	}
     else
     {
         NSLog(@"ERROR: Unknown type of widget,%@",self);
@@ -156,6 +212,25 @@
 		temp+=[w count];
 	}
 	return temp;
+}
+-(void)buildChartingURLString:(NSString*)baseURL
+{
+	// SHOULD CHECK FOR SERVICE! IF NOT RRD WE SHOULD CHANGE THIS
+	NSString* theURLofChart=[baseURL stringByAppendingString:@"rrdchart.png?"];
+	
+	// v1.2 sample url  http://demo.openhab.org:8080/rrdchart.png?groups=Weather_Chart&period=d
+	
+	if ([self.item.type isEqualToString:@"GroupItem"])
+		theURLofChart=[theURLofChart stringByAppendingFormat:
+					   @"groups=%@",self.item.name];
+	else
+		theURLofChart=[theURLofChart stringByAppendingFormat:
+					   @"items=%@",self.item.name];
+	
+	theURLofChart=[theURLofChart stringByAppendingFormat:
+				   @"&period=%@",self.period];
+	
+	self.imageURL=theURLofChart;
 }
 
 @end

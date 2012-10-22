@@ -55,7 +55,7 @@
         
 //        // Refresh sitemap and icon
         
-        [[openhab sharedOpenHAB] refreshSitemap];
+        //[[openhab sharedOpenHAB] refreshSitemap];
     }
 }
 @end

@@ -47,6 +47,7 @@
 	
 	// IF NOT AN IMAGE, check for icon
 	if ([theWidget widgetType]!=7 && [theWidget widgetType]!=10)
+	{
 		if (theWidget.iconImage)
 		{
 			self.theImage.image=theWidget.iconImage;
@@ -57,7 +58,7 @@
 			// lets look for the image and download it
 			[[openhab sharedOpenHAB] getImage:theWidget.icon];
 		}
-
+	}
     if ([theWidget.widgets count]>0)
     {
         [self setAccessoryType:UITableViewCellAccessoryDisclosureIndicator];

@@ -15,6 +15,7 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #import <UIKit/UIKit.h>
 #import "openhab.h"
 
@@ -25,4 +26,5 @@
 }
 @property (nonatomic,weak) openhabWidget*widget;
 @property (nonatomic,weak) UITableView*lastTableView;
+@property (nonatomic) NSInteger lastselected;
 @end

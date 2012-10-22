@@ -25,11 +25,13 @@ static openhab *sharedOpenhab = nil;
 @interface openhab ()
 //-(void)searchAndUpdateIconImages:(NSString*)imageName withData:(NSData*)data andWidgets:(NSArray*)theWidgets;
 -(void)updateArrayAndCopyImages:(openhabImage*)image andWidgets:(NSArray*)theWidgets;
+-(void)addressIsReacheable; // V1.2 search for address or alternate
 @end
 
 @implementation openhab
 @synthesize arrayItems,queue,sitemap;
-@synthesize itemsLoaded,sitemapName,imagesArray,refreshing,groupsLoaded,sitemapLoaded,delegate,theBaseUrl,theMap;
+@synthesize itemsLoaded,sitemapName,refreshing,groupsLoaded,sitemapLoaded,delegate,theBaseUrl,theMap,currentlyPolling,currentlyRefreshing,currentPage,pagesDictionary,imagesDictionary,serverReachable;
+
 
 -(openhab*)init
 {
@@ -39,7 +41,8 @@ static openhab *sharedOpenhab = nil;
         self.arrayItems=[[NSMutableArray alloc]init];
 		self.queue=[[requestQueue alloc]init];
 		self.sitemap=[[NSMutableArray alloc]init];
-		self.imagesArray=[[NSMutableArray alloc]init];
+		self.pagesDictionary=[NSMutableDictionary dictionaryWithCapacity:0];
+		self.imagesDictionary=[NSMutableDictionary dictionaryWithCapacity:0];
 		self.delegate=nil;
 		self.theBaseUrl=nil;
 		self.theMap=nil;
@@ -48,6 +51,10 @@ static openhab *sharedOpenhab = nil;
 		refreshing=NO;
 		groupsLoaded=NO;
 		sitemapLoaded=NO;
+		serverReachable=NO;
+		currentlyPolling=0;
+		currentlyRefreshing=0;
+		[self addressIsReacheable];
     }
     return self;
 }
@@ -68,11 +75,32 @@ static openhab *sharedOpenhab = nil;
     return sharedOpenhab;
 }
 
+#pragma mark - address reachability
+
+-(void)addressIsReacheable // v1.2 check if main address reacheable
+{
+	self.theBaseUrl=(NSString*)[configuration readPlist:@"BASE_URL"];
+	theMap=(NSString*)[configuration readPlist:@"map"];
+	NSURL*fullUrl=[NSURL URLWithString:theBaseUrl];
+	[self.queue setDelegate:self];
+	[self.queue doGetUrl:fullUrl withTag:11];
+	
+
+}
+-(void)alternateIsReacheable // v1.2 check if alternate address reacheable
+{
+	NSDictionary*alts=(NSDictionary*)[configuration readPlist:@"alternateURLs"];
+	theMap=(NSString*)[configuration readPlist:@"alternateMap"];
+	self.theBaseUrl=[alts objectForKey:(NSString*)[configuration readPlist:@"BASE_URL"]];
+	NSURL*fullUrl=[NSURL URLWithString:theBaseUrl];
+	[self.queue setDelegate:self];
+	[self.queue doGetUrl:fullUrl withTag:12];
+}
+
 #pragma mark - initialize items
 
 -(void)initArrayItems
 {
-	self.theBaseUrl=(NSString*)[configuration readPlist:@"BASE_URL"];
 	// UPDATE: from version 0.9
 	NSURL*fullUrl=[NSURL URLWithString:[theBaseUrl stringByAppendingFormat:@"rest/items?type=json"]];
 	[self.queue setDelegate:self];
@@ -100,9 +128,10 @@ static openhab *sharedOpenhab = nil;
 
 -(void)initSitemap
 {
+
 	if (itemsLoaded && groupsLoaded)
 	{
-		theMap=(NSString*)[configuration readPlist:@"map"];
+		NSLog(@"Sitemap requested");
 		// UPDATE: from version 0.9
 		NSURL*fullUrl=[NSURL URLWithString:[theBaseUrl stringByAppendingFormat:@"rest/sitemaps/%@?type=json",theMap]];
 		[self.queue setDelegate:self];
@@ -112,6 +141,16 @@ static openhab *sharedOpenhab = nil;
     {
         [self initArrayItems];
     }
+}
+
+#pragma mark - Request sitemaps for ip
+-(void)requestSitemaps:(NSString*)fromServer
+{
+	NSURL*fullUrl=[NSURL URLWithString:
+				   [fromServer
+					stringByAppendingFormat:@"rest/sitemaps?type=json"]];
+	[self.queue setDelegate:self];
+	[self.queue doGetUrl:fullUrl withTag:10];
 }
 
 #pragma mark - convenience method to get an item by its name
@@ -163,30 +202,67 @@ static openhab *sharedOpenhab = nil;
 	}
 }
 
+//v1.2 Long poll page
+-(void)longPollSitemap:(NSString*)page
+{
+	if (self.sitemapLoaded && page)
+	{
+		self.longPolling=YES;
+		NSURL*fullUrl=[NSURL URLWithString:[theBaseUrl stringByAppendingFormat:@"rest/sitemaps/%@/%@",theMap,page]];
+		[self.queue setDelegate:self];
+		currentPage=page;
+		currentlyPolling=[self.queue doGetLongPollUrl:fullUrl withTag:8];
+	}
+}
+
+-(void)longPollCurrent
+{
+	[self longPollSitemap:self.currentPage];
+}
+-(void)refreshPage:(NSString*)page
+{
+	if (self.sitemapLoaded && page && !refreshing)
+	{
+		self.refreshing=YES;
+		NSURL*fullUrl=[NSURL URLWithString:[theBaseUrl stringByAppendingFormat:@"rest/sitemaps/%@/%@",theMap,page]];
+		[self.queue setDelegate:self];
+		currentlyRefreshing=[self.queue doGetUrlWithOperation:fullUrl withTag:9];
+	}
+}
+
+-(void)cancelPolling
+{
+	NSLog(@"Cancelling long-poll %i",currentlyPolling);
+	self.longPolling=NO;
+	[self.queue cancelRequest:currentlyPolling];
+}
+
+-(void)cancelRefresh
+{
+	NSLog(@"Cancelling refresh %i",currentlyRefreshing);
+	self.refreshing=NO;
+	[self.queue cancelRequest:currentlyRefreshing];
+}
+
 #pragma mark - get icons and images
 
--(openhabImage*)getOpenHABImageinArray:(NSString*)name
+// v1.2 new with dictionary
+
+-(openhabImage*)getOpenHABImageinDictionary:(NSString*)name
 {
-	openhabImage *result=nil;
-	for (openhabImage*oi in imagesArray) {
-		if ([name isEqualToString:oi.name]) {
-			result=oi;
-			return oi;
-		}
-	}
-	return result;
+	return [imagesDictionary objectForKey:name];
 }
 
--(BOOL)getNameinImageinArray:(NSString*)name
-{
-	for (openhabImage*oi in imagesArray) {
-		if ([name isEqualToString:oi.name]) {
-			return YES;
-		}
-	}
-	return NO;
-}
 
+// v1.2 New version using dictionary
+
+-(BOOL)getNameinImageinDictionary:(NSString*)name
+{
+	if ([imagesDictionary objectForKey:name])
+		return YES;
+	else
+		return NO;
+}
 
 
 
@@ -194,10 +270,10 @@ static openhab *sharedOpenhab = nil;
 {
 	// If name is not there, put it there
 	
-	if (![self getNameinImageinArray:theImageName])
+	if (![self getNameinImageinDictionary:theImageName])
 	{
-		[imagesArray addObject:[[openhabImage alloc] initWithName:theImageName]];
-		
+		openhabImage*img=[[openhabImage alloc] initWithName:theImageName];
+		[imagesDictionary setObject:img forKey:theImageName];
 		// Ask for the image to the server
 		NSURL*fullUrl=[NSURL URLWithString:[theBaseUrl stringByAppendingFormat:@"images/%@.png",theImageName]];
 		[self.queue setDelegate:self];
@@ -207,26 +283,27 @@ static openhab *sharedOpenhab = nil;
 	else
 	{
 		// The image's name  is in the array
-		openhabImage*theImage=[self getOpenHABImageinArray:theImageName];
+		openhabImage*theImage=[self getOpenHABImageinDictionary:theImageName];
 		
 		// If it is already downloaded, update
 		if (theImage.image!=nil)
 		{
-			NSLog(@"Got image %@, do not download!",theImageName);
+			//NSLog(@"Got image %@, do not download!",theImageName);
 			[self updateArrayAndCopyImages:theImage andWidgets:sitemap];
 			[delegate imagesRefreshed];
 		}
 	}	
 }
 
+
 -(void)getImageWithURL:(NSString *)theImageName
 {
 	// If name is not there, put it there
 	
-	if (![self getNameinImageinArray:theImageName])
+	if (![self getNameinImageinDictionary:theImageName])
 	{
-		[imagesArray addObject:[[openhabImage alloc] initWithName:theImageName]];
-		
+        openhabImage*img=[[openhabImage alloc] initWithName:theImageName];
+		[imagesDictionary setObject:img forKey:theImageName];
 		// Ask for the image to the server
 		NSURL*fullUrl=[NSURL URLWithString:theImageName];
 		[self.queue setDelegate:self];
@@ -236,7 +313,7 @@ static openhab *sharedOpenhab = nil;
 	else
 	{
 		// The image's name  is in the array
-		openhabImage*theImage=[self getOpenHABImageinArray:theImageName];
+		openhabImage*theImage=[self getOpenHABImageinDictionary:theImageName];
 		
 		// If it is already downloaded, update
 		if (theImage.image!=nil)
@@ -329,7 +406,23 @@ static openhab *sharedOpenhab = nil;
 
 #pragma mark - init Sitemap response
 
--(openhabWidget*)buildWidgetTree:(NSDictionary*)w
+// Used to validate image urls
+- (BOOL) validateUrl: (NSString *) url {
+	NSURL *candidateURL = [NSURL URLWithString:url];
+	// WARNING > "test" is an URL according to RFCs, being just a path
+	// so you still should check scheme and all other NSURL attributes you need
+	if (candidateURL && candidateURL.scheme && candidateURL.host) {
+		// candidate is a well-formed url with:
+		//  - a scheme (like http://)
+		//  - a host (like stackoverflow.com)
+		return YES;
+	}
+	else
+		return NO;
+}
+
+// v1.2 modified, now we have an update bool, so we update or replace items in widgets
+-(openhabWidget*)buildWidgetTree:(NSDictionary*)w update:(BOOL)shouldUpdateItems
 {
 	// initialize widget
 	
@@ -337,61 +430,148 @@ static openhab *sharedOpenhab = nil;
 	
 	openhabItem*itemInWidget=[[openhabItem alloc]initWithDictionary:[w objectForKey:@"item"]];
 	
-	if (itemInWidget!=nil)
+	
+	
+	// v1.2 modified, should UPDATE widget sometimes
+	theWidget.item=itemInWidget;
+	if (itemInWidget!=nil && !shouldUpdateItems)
 	{
 		for (openhabItem*temp in arrayItems) {
 			if ([temp.name isEqualToString:itemInWidget.name])
 				theWidget.item=temp;
 		}
 	}
-
-    // if there is an icon, get the icon. if it is a refresh DON'T!
-//    if (!self.sitemapLoaded && ![theWidget.icon isEqualToString:@""] && ![theWidget.icon isEqualToString:@"frame"])
-//        [self getImage:theWidget.icon];
     
 	// Check if there ar more widgets 	
 	id hasWidget=[w objectForKey:@"widget"];
 	if (hasWidget)
+	{
 		if ([[w objectForKey:@"widget"] isKindOfClass:[NSDictionary class]])
 		{
 			// Just one sibling
-			[theWidget.widgets addObject:[self buildWidgetTree:[w objectForKey:@"widget"]]];
+			[theWidget.widgets addObject:[self buildWidgetTree:[w objectForKey:@"widget"] update:shouldUpdateItems]];
 		}
-		else for (NSDictionary*sibling in [w objectForKey:@"widget"]) {
-			[theWidget.widgets addObject:[self buildWidgetTree:sibling]];
+		else
+		{
+			for (NSDictionary*sibling in [w objectForKey:@"widget"]) {
+			[theWidget.widgets addObject:[self buildWidgetTree:sibling update:shouldUpdateItems]];
+			}
 		}
+	}
+
 	
 	// Check if there ar more widgets in LinkedPage
 	hasWidget=[[w objectForKey:@"linkedPage"] objectForKey:@"widget"];
 	if (hasWidget)
+	{
 		if ([hasWidget isKindOfClass:[NSDictionary class]])
 		{
 			// Just one sibling
-			[theWidget.widgets addObject:[self buildWidgetTree:hasWidget]];
+			[theWidget.widgets addObject:[self buildWidgetTree:hasWidget update:shouldUpdateItems]];
 		}
-		else for (NSDictionary*sibling in [[w objectForKey:@"linkedPage"]objectForKey:@"widget"]) {
-			[theWidget.widgets addObject:[self buildWidgetTree:sibling]];
+		else
+		{
+			for (NSDictionary*sibling in [[w objectForKey:@"linkedPage"]objectForKey:@"widget"]) {
+			[theWidget.widgets addObject:[self buildWidgetTree:sibling update:shouldUpdateItems]];
 		}
-	
+		}
+	}
 	// UPDATE: Check for mappings
 	
 	hasWidget=[w objectForKey:@"mapping"];
 	if (hasWidget)
+	{
+		openhabMapping*theMapping;
 		if ([hasWidget isKindOfClass:[NSDictionary class]])
 		{
 			// Just one mapping
-			[theWidget.mappings addObject:[[openhabMapping alloc] initWithDictionary:hasWidget]];
+			theMapping=[[openhabMapping alloc] initWithDictionary:hasWidget];
+			[theWidget.mappings setObject:theMapping forKey:theMapping.command];
 		}
-		else for (NSDictionary*children in [w objectForKey:@"mapping"]) {
-			[theWidget.mappings addObject:[[openhabMapping alloc] initWithDictionary:children]];
+		else {
+			
+			for (NSDictionary*children in [w objectForKey:@"mapping"]) {
+				theMapping=[[openhabMapping alloc] initWithDictionary:children];
+				[theWidget.mappings setObject:theMapping forKey:theMapping.command];
+			}
 		}
+	}
 	// UPDATE: Check for url
 	
 	if ([theWidget widgetType]==7 || [theWidget widgetType]==10 ) {
+        
+        // CHANGE v1.1: check validity of url
+        
 		theWidget.imageURL=[w objectForKey:@"url"];
+        if (![self validateUrl:theWidget.imageURL])
+        {
+            theWidget.imageURL=[theBaseUrl stringByAppendingFormat:@"%@",theWidget.imageURL];
+        }
+		
+		// v1.2 get refresh time
+		NSString*theString=[w objectForKey:@"refresh"];
+		theWidget.refresh=[theString integerValue];
 	}
+	
+	// v1.2 update: check for time interval at sliders
+	if ([theWidget widgetType]==3) {
+                
+		theWidget.sendFrequency=[[w objectForKey:@"sendFrequency"] floatValue];
+		if (!theWidget.sendFrequency)
+		{
+			theWidget.sendFrequency=0.5;
+		}
+	}
+	// v1.2 update: Setpoint widget
+	if ([theWidget widgetType]==11) {
+		
+		//NSLog(@"Values %@,%@,%@",[w objectForKey:@"minValue"],[w objectForKey:@"maxValue"],[w objectForKey:@"step"]);
+		theWidget.minValue=[[w objectForKey:@"minValue"] floatValue];
+		if (!theWidget.minValue)
+		{
+			theWidget.minValue=0;
+		}
+		theWidget.maxValue=[[w objectForKey:@"maxValue"] floatValue];
+		if (!theWidget.maxValue)
+		{
+			theWidget.maxValue=0;
+		}
+		theWidget.step=[[w objectForKey:@"step"] floatValue];
+		if (!theWidget.step)
+		{
+			theWidget.step=0;
+		}
+		//NSLog(@"Values %f,%f,%f",theWidget.minValue,theWidget.maxValue,theWidget.step);
+	}
+	// v1.2 update: Webview widget
+	if ([theWidget widgetType]==12) {
+		//NSLog(@"Height %@, URL: %@",[w objectForKey:@"height"],[w objectForKey:@"url"]);
+		NSString*theString=[w objectForKey:@"height"];
+		theWidget.height=[theString integerValue];
+		theWidget.theWidgetUrl=[NSURL URLWithString:[w objectForKey:@"url"]];
+	}
+	// v1.2 update: Video widget
+	if ([theWidget widgetType]==14) {
+		theWidget.theWidgetUrl=[NSURL URLWithString:[w objectForKey:@"url"]];
+	}
+	
+	// v1.2 update: Charting widget: build the url
+	if ([theWidget widgetType]==16) {
+		NSString*theString=[w objectForKey:@"refresh"];
+		theWidget.refresh=[theString integerValue];
+		[theWidget buildChartingURLString:self.theBaseUrl];
+	}
+	// v1.2 Save the widget in dictionary
+	
+	if (theWidget.linkedPage && !shouldUpdateItems)
+	{
+		//NSLog(@"adding page %@. Widget: %@",theWidget.linkedPage,theWidget);
+		[self.pagesDictionary setObject:theWidget forKey:theWidget.linkedPage];
+	}
+	
 	return theWidget;
 }
+
 
 -(void)initSitemapResponse:(NSData*)data
 {
@@ -428,14 +608,72 @@ static openhab *sharedOpenhab = nil;
 		self.sitemapName=[homepage objectForKey:@"title"];
 		// Check if more than one widget or just one
 		if ([[homepage objectForKey:@"widget"] isKindOfClass:[NSDictionary class]])
-			[self.sitemap addObject:[self buildWidgetTree:[homepage objectForKey:@"widget"]]];
+			[self.sitemap addObject:[self buildWidgetTree:[homepage objectForKey:@"widget"] update:NO]];
 		else for (NSDictionary*w in [homepage objectForKey:@"widget"]) {
-			[self.sitemap addObject:[self buildWidgetTree:w]];
+			[self.sitemap addObject:[self buildWidgetTree:w update:NO]];
 		}		// Build each branch of the tree and add to the sitemap
 
 		self.sitemapLoaded=YES;
         [self.delegate sitemapLoaded];
 	}
+}
+
+#pragma mark - request sitemap response
+-(void)requestSitemapResponse:(commLibrary*)com
+{
+	NSError*error;
+	NSMutableArray*response=nil;
+	id JSONdata=[NSJSONSerialization JSONObjectWithData:com.responseData options:0 error:&error];
+	if (error)
+	{
+		NSLog(@"ERROR: error parsing JSON, the parser said :%@\n",error);
+		[delegate JSONparseError:@"sitemap" withError:error];
+	}
+	else
+	{
+		/*Structure of sitemap is:
+		 
+		{"sitemap":
+			{
+				"name":"demo",
+				"link":"http://demo.openhab.org:8080/rest/sitemaps/demo",
+				"homepage":{"link":"http://demo.openhab.org:8080/rest/sitemaps/demo/demo"}
+			}
+		 }
+		 
+		 or
+		 
+		 {"sitemap":
+			[	{
+					"name":"demo",
+					"link":"http://demo.openhab.org:8080/rest/sitemaps/demo",
+					"homepage":{"link":"http://demo.openhab.org:8080/rest/sitemaps/demo/demo"}
+				},
+				{
+					"name":"demo",
+					"link":"http://demo.openhab.org:8080/rest/sitemaps/demo",
+					"homepage":{"link":"http://demo.openhab.org:8080/rest/sitemaps/demo/demo"}
+				},....
+		 }
+		 
+		 */
+		NSDictionary*dict=(NSDictionary*)JSONdata; // get the data
+		id sitemaps=[dict objectForKey:@"sitemap"];
+		response=[NSMutableArray arrayWithCapacity:0];
+		
+		
+		if ([sitemaps isKindOfClass:[NSDictionary class]])
+		{
+			[response addObject:[sitemaps objectForKey:@"name"]];
+		}
+		else
+		{
+			for (NSDictionary*temp in sitemaps) {
+				[response addObject:[temp objectForKey:@"name"]];
+			}
+		}
+	}
+	[delegate requestSitemapsResponse:response];
 }
 
 #pragma mark - convenience method to search&update item and sitemap
@@ -479,10 +717,44 @@ static openhab *sharedOpenhab = nil;
 	}
 }
 
+// V1.2 Refresh returned widgets from long-polling
+-(void)searchAndRefreshWidgetLongPolling:(NSArray*)received theBranch:(NSArray*)original
+{
+    
+	// v1.2 update all widgets in the widgets array
+	for (int i=0;i<[received count];i++) {
+
+		openhabWidget* originalWidget=[original objectAtIndex:i];
+		openhabWidget* receivedWidget=[received objectAtIndex:i];
+		
+		// There is a problem here, we MUST ask for the image later because if not, the image is NOT updated
+		
+		BOOL shouldUpdateImage=NO;
+		if (![receivedWidget.icon isEqualToString:originalWidget.icon]) {
+			shouldUpdateImage=YES;
+		}
+		// v1.2 update the data
+		originalWidget.icon=receivedWidget.icon;
+		originalWidget.data=receivedWidget.data;
+		
+		// v1.2 update the item
+		if (receivedWidget.item)
+		{
+			originalWidget.item.state=receivedWidget.item.state;
+		}
+		// v1.2 get the image if needed
+		if (shouldUpdateImage)
+			[self getImage:receivedWidget.icon];
+
+		// v1.2 update the widgets in the received widget.
+		[self searchAndRefreshWidgetLongPolling:receivedWidget.widgets theBranch:originalWidget.widgets];
+	}
+}
+
 -(void)updateArrayAndCopyImages:(openhabImage*)image andWidgets:(NSArray*)theWidgets
 {
 	// Save the image to the array
-	openhabImage*theImage=[self getOpenHABImageinArray:image.name];
+	openhabImage*theImage=[self getOpenHABImageinDictionary:image.name];
 	if (theImage.image == nil)
 		theImage.image =image.image;
 	
@@ -506,31 +778,10 @@ static openhab *sharedOpenhab = nil;
     
 }
 
-//-(void)searchAndUpdateIconImages:(NSString*)imageName withData:(NSData*)data andWidgets:(NSArray*)theWidgets
-//{
-//#warning maybe here w.icon must get its data from array¿?
-//	
-//	// Save the image to the array
-//	if ([self getImageinArray:imageName]==nil)
-//		[imagesArray addObject:[[openhabImage alloc] initWithData:data andName:imageName]];
-//	
-//	// get the image
-//	UIImage*theImage=[self getImageinArray:imageName];
-//    
-//	for (openhabWidget*w in theWidgets) {
-//        if ([w.icon isEqualToString:imageName]) {
-//            w.iconImage=theImage;
-//        }
-//        [self searchAndUpdateIconImages:imageName withData:data andWidgets:w.widgets];
-//    }
-//}
-
 #pragma mark - change value of item response
 
 -(void)changeValueofItemResponse:(commLibrary*)request
 {
-    // DO NOT CHANGE THE VALUE!, I just want to know request finished OK
-    
     // For example: http://localhost:8080/rest/items/Light_Outdoor_Terrace/state
     // Copy the name of the item
     NSArray *temp=[[NSString stringWithFormat:@"%@",request.theUrl] componentsSeparatedByString:@"/"];
@@ -540,10 +791,10 @@ static openhab *sharedOpenhab = nil;
         if ([itemTemp.name isEqualToString:theItemName])
         {
             theItem=itemTemp;
-            break;
-            
+			break;
         }
     }
+	
     [delegate valueOfItemChangeRequested:theItem];
 }
 
@@ -575,7 +826,6 @@ static openhab *sharedOpenhab = nil;
 
 -(void)refreshSitemapResponse:(NSData*)data
 {
-	NSLog(@"Refreshing sitemap");
 	NSError*error;
 	id JSONdata=[NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
 	if (error)
@@ -588,15 +838,16 @@ static openhab *sharedOpenhab = nil;
 	{
 		NSDictionary*dict=(NSDictionary*)JSONdata;
 		NSDictionary*homepage=(NSDictionary*)[dict objectForKey:@"homepage"];
-		
-		
+		//v1.2 long-poll needs
+		if (!homepage)
+			homepage=dict;
 		// Check if more than one widget or just one
 		NSMutableArray*theWidgets=[[NSMutableArray alloc]initWithCapacity:0];
 		if ([[homepage objectForKey:@"widget"] isKindOfClass:[NSDictionary class]]){
-			[theWidgets addObject:[self buildWidgetTree:[homepage objectForKey:@"widget"]]];
+			[theWidgets addObject:[self buildWidgetTree:[homepage objectForKey:@"widget"] update:YES]];
 		}
 		else for (NSDictionary*w in [homepage objectForKey:@"widget"]) {
-			[theWidgets addObject:[self buildWidgetTree:w]];
+			[theWidgets addObject:[self buildWidgetTree:w update:YES]];
 		}
 
 		for (int i=0; i<[sitemap count]; i++) {
@@ -607,6 +858,68 @@ static openhab *sharedOpenhab = nil;
     [delegate sitemapRefreshed];
 }
 
+// v1.2 Get the widget of the page
+-(openhabWidget*)getWidgetofPage:(NSString*)thePage
+{
+	//NSLog(@"Widget %@",[self.pagesDictionary objectForKey:thePage]);
+	return [self.pagesDictionary objectForKey:thePage];
+}
+// v1.2 Refresh the page
+
+-(void)refreshLongPollPage:(commLibrary*)com
+{
+	NSData*data=com.responseData;
+	NSString*page=[com.theUrl.pathComponents lastObject];
+	NSLog(@"Refreshing page %@",page);
+	NSError*error;
+	id JSONdata;
+	if (data)
+		JSONdata=[NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+	if (error)
+	{
+		NSString*corrupted=[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+		NSLog(@"ERROR: error parsing JSON longpoll response: %@ as a string \n%@",error,corrupted);
+		[delegate JSONparseError:@"refreshsitemap" withError:error];
+	}
+	else if (data)
+	{
+		NSDictionary*dict=(NSDictionary*)JSONdata;
+		NSDictionary*homepage=(NSDictionary*)[dict objectForKey:@"homepage"];
+		//v1.2 long-poll needs
+		if (!homepage)
+			homepage=dict;
+		// Check if more than one widget or just one
+		NSMutableArray*theWidgets=[[NSMutableArray alloc]initWithCapacity:0];
+		if ([[homepage objectForKey:@"widget"] isKindOfClass:[NSDictionary class]]){
+			[theWidgets addObject:[self buildWidgetTree:[homepage objectForKey:@"widget"] update:YES]];
+		}
+		else for (NSDictionary*w in [homepage objectForKey:@"widget"]) {
+			[theWidgets addObject:[self buildWidgetTree:w update:YES]];
+		}
+		openhabWidget*thePageWidget=nil;
+		
+		// v1.2 If Main page get it, if not, go get it
+		if ([page isEqualToString:self.theMap])
+		{
+			thePageWidget=[openhabWidget new];
+			thePageWidget.widgets=self.sitemap;
+		}
+		else
+		{
+			thePageWidget=[self getWidgetofPage:page];
+		}
+		// v1.2 update the page widgets
+		if (!thePageWidget)
+		{
+			NSLog(@"ERROR: Not found page %@ at sitemap",page);
+		}
+		else
+		{
+			// v1.2 update
+			[self searchAndRefreshWidgetLongPolling:theWidgets theBranch:thePageWidget.widgets];
+		}
+	}
+}
 
 -(void)getImageResponse:(commLibrary*)com
 {
@@ -626,7 +939,7 @@ static openhab *sharedOpenhab = nil;
 
 -(void)getImageResponseURL:(commLibrary*)com
 {
-    // Copy the name of the image without the .png
+    // Copy the name of the image
 	NSString* theImageName=[NSString stringWithFormat:@"%@",com.theUrl];
     
     // Update the whole tree
@@ -635,6 +948,34 @@ static openhab *sharedOpenhab = nil;
 	openhabImage*image=[[openhabImage alloc] initWithImage:theImage andName:theImageName];
     [self updateArrayAndCopyImages:image andWidgets:sitemap];
     //[delegate imagesRefreshed];
+}
+
+//v1.2 Should delete image urls to let charts refresh
+-(void)deleteImage:(NSString*)theImageName
+{
+	[imagesDictionary removeObjectForKey:theImageName];
+}
+
+//v1.2 tag 8 longpoll url
+
+-(void)longpollUrlReceivedData:(commLibrary*)com
+{
+	//v1.2 Long-polling if not yet polling
+	self.longPolling=NO;
+	// Try to get updates no more than once per second
+	[self refreshLongPollPage:com];
+	[delegate longpollDidReceiveData:com];
+}
+
+//v1.2 tag 9 refresh page
+
+-(void)PageRefreshReceivedData:(commLibrary*)com
+{
+	//v1.2 refresh finished
+	self.refreshing=NO;
+	// Try to get updates no more than once per second
+	[self refreshLongPollPage:com];
+	[delegate pageRefreshed:com];
 }
 
 #pragma mark - protocol requestQueue
@@ -668,6 +1009,23 @@ static openhab *sharedOpenhab = nil;
 		case 7:
             [self getImageResponseURL:com];
             break;
+		case 8: // V1.2 long-polling
+			[self performSelectorOnMainThread:@selector(longpollUrlReceivedData:) withObject:com waitUntilDone:NO];
+			break;
+		case 9:// V1.2 refresh page
+			[self performSelectorOnMainThread:@selector(PageRefreshReceivedData:) withObject:com waitUntilDone:NO];
+			break;
+		case 10: // v1.2 request sitemaps
+			[self requestSitemapResponse:com];
+			break;
+		case 11: // v1.2 main address reacheable
+			NSLog(@"Main address reacheable, do nothing");
+			self.serverReachable=YES;
+			break;
+		case 12: // v1.2 alternate address reacheable
+			NSLog(@"Alternate address reacheable, do nothing");
+			self.serverReachable=YES;
+			break;
 		default:
 			NSLog(@"ERROR: Unknown request response %@",com);
 			[delegate requestFailed:com withError:nil];
@@ -676,8 +1034,21 @@ static openhab *sharedOpenhab = nil;
 }
 -(void)requestinQueueFinishedwithError:(commLibrary*)com error:(NSError*)error
 {
-	NSLog(@"ERROR: request %@ finished with error: %@",com,error);
-    [delegate requestFailed:com withError:error];
+	if (com.tag==11)
+	{
+		NSDictionary*alts=(NSDictionary*)[configuration readPlist:@"alternateURLs"];
+		theMap=(NSString*)[configuration readPlist:@"alternateMap"];
+		self.theBaseUrl=[alts objectForKey:(NSString*)[configuration readPlist:@"BASE_URL"]];
+		if (self.theBaseUrl)
+			[self alternateIsReacheable]; // v1.2 check if alternate
+		else
+			[delegate requestFailed:com withError:error];
+	}
+	else
+	{
+		NSLog(@"ERROR: request %@ finished with error: %@",com,error);
+		[delegate requestFailed:com withError:error];
+	}
 }
 -(void)allrequestsinQueueFinished
 {
@@ -700,7 +1071,7 @@ static openhab *sharedOpenhab = nil;
 	}
 	else
 	{
-		NSLog(@"\n-----All requests finished----- petitions: %i Downloaded size: %i bytes\n\n\n",[queue Allpetitions],[queue sizeDownloaded]);	
+		NSLog(@"\n-----All requests finished----- petitions: %i Downloaded size: %i bytes\n\n\n",[queue Allpetitions],[queue sizeDownloaded]);
 	}
     [delegate allRequestsFinished];
 }

@@ -1,22 +1,33 @@
 /* 
   File.strings
-//  openHAB iOS User Interface
-//  Copyright © 2011 Pablo Romeu
-//
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  openhab
+
+  Created by Pablo Romeu Guallart on 15/12/11.
+  Copyright (c) 2011 spaphone. All rights reserved.
 */
 
+/*__Strings from v1.2___*/
+
+"SitemapEmpty"="Sitemap leer";
+"SitemapEmptyText"="Bitte wählen Sie einen Sitemapnamen in der Konfiguration";
+"AuthFailedLocalized"="Anmeldung fehlgeschlagen";
+"dialogAuthFailedLocalized"="Anmeldung am Server %@ als Benutzer %@ ist fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldedaten";
+"UnkAuthFailedLocalized"="Unbekannter Fehler während der Anmeldung";
+"UnkdialogAuthFailedLocalized"="Ein unbekannter Fehler ist während der Anmeldung aufgetreten";
+"LocalizedFavorites"="Favoriten";
+"LocalizedBonjour"="Suche nach Servern...";
+"theAuthenticationLabel"="Anmeldedaten";
+"loginLoc"="Anmeldedaten";
+"warningAuthTextLoc"="Ihre Anmeldedaten werden auf dem iOS Gerät verschlüsselt gespeichert.
+
+
+Anmeldedaten werden pro Server und Port gespeichert, d.h. http://192.168.1.1:8080/ und https://192.168.1.1:8443/ können unterschiedliche Anmeldedaten benötigen.
+
+Wichtig: SSL Zertifikate werden automatisch akzeptiert (ohne Prüfung der CA).";
+"LocalizedAvailableMaps1"="Verfügbare Sitemaps von %@";
+"labelAlternateServer"="Remote URL";
+
+/**********/
 "labelDonation"="Wenn Sie diese App mögen, betrachten bitte eine Spende an die App-Programmierer";
 "MainLabelDonation"="Spenden Sie für die Anwendung zu unterstützen helfen";
 "Donations"="Spenden";
@@ -56,11 +67,10 @@
 "Info"="Info";
 "ErrorSitemapConfig"="Es sind Fehler in der Sitemap-Konfiguration";
 "LoadingSitemapUrl2"="Lade URL: %@ Sitemap:%@";
-"InfoText"="© 2011 Pablo Romeu
+"InfoText1"="openHAB iOS client v%@ 
+© 2011 Pablo Romeu
 
-Die vollständige Version erhalten Sie hier: http:\/\/itunes.apple.com\/us\/app\/openhab\/id492054521?l=de&ls=1&mt=8
-
-Dieses Programm ist ein Client für openHAB, welches unter http:\/\/openhab.org verfügbar ist. Für Support bzgl. openHAB besuchen Sie bitte die openHAB Homepage.
+Dieses Programm ist ein Client für openHAB, welches unter http:\/\/openhab.org verfügbar ist. Für Support bzgl. openHAB besuchen Sie bitte die openHAB Homepage. Für eine kurze Anleitung zur openHAB besuchen Sie bitte: http://code.google.com/p/openhab/wiki/Setup
 
 Das open Home Automation Bus (openHAB) Projekt dient als universale Integrationsplattform für alle Dinge rund um Heimautomatisierung.
 
@@ -82,6 +92,4 @@ MPD (Music Player Deamon)
 VDR
 Asterisk
 
-openHAB ist OpenSource unter der GPL v3 Lizenz.
-
-Dieses Programm nutzt MBProgressHUD von Matej Bukovinski, welches unter der MIT License steht.";
+Dieses Programm nutzt MBProgressHUD von Matej Bukovinski und PDKeychainBindings von Carl Brown, welches unter der MIT License steht.";

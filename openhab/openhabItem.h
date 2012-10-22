@@ -20,7 +20,7 @@
 #import <Foundation/Foundation.h>
 
 /*
- Los items pueden ser grupos o:
+ Los items may be groups or:
  
  'Switch' | 'Rollershutter' | 'Number' | 'String' | 'Dimmer' | 'Contact' | 'DateTime' | ID
  

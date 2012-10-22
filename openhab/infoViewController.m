@@ -58,13 +58,14 @@
 	
     // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
     // self.navigationItem.rightBarButtonItem = self.editButtonItem;
-    self.donateButton.title=NSLocalizedString(@"Donations", @"Donations");
+    NSString*version=(NSString*)[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"];
+	self.donateButton.title=NSLocalizedString(@"Donations", @"Donations");
 	self.navigationItem.title=NSLocalizedString(@"Info", @"Info");
-	self.theTextView.text=NSLocalizedString(@"InfoText", @"InfoText");
+	self.theTextView.text=[NSString stringWithFormat:NSLocalizedString(@"InfoText1", @"InfoText1"),version];
 	
 	float size=[[openhab sharedOpenHAB].queue sizeDownloaded]/1024.0;
 	
-	self.toBeLocalizedSomeStats.text=[NSString stringWithFormat:NSLocalizedString(@"Stats3", @"Stats3"),[[openhab sharedOpenHAB].queue Allpetitions],size,[[openhab sharedOpenHAB].imagesArray count]];
+	self.toBeLocalizedSomeStats.text=[NSString stringWithFormat:NSLocalizedString(@"Stats3", @"Stats3"),[[openhab sharedOpenHAB].queue Allpetitions],size,[[[openhab sharedOpenHAB].imagesDictionary allKeys] count]];
 }
 
 - (void)viewDidUnload

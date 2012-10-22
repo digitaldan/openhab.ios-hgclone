@@ -30,9 +30,11 @@
 	NSMutableArray* arrayItems;
 	NSMutableArray*sitemap;
 	NSString*sitemapName;
-	NSMutableArray*imagesArray;
+	NSMutableDictionary*pagesDictionary,*imagesDictionary;
 	requestQueue* queue;
-	BOOL itemsLoaded,groupsLoaded,sitemapLoaded,refreshing;
+	BOOL itemsLoaded,groupsLoaded,sitemapLoaded,refreshing,serverReachable;
+	NSInteger currentlyPolling,currentlyRefreshing;
+	NSString*currentPage;
 	id<openHABprotocol> delegate;
 }
 @property (nonatomic,strong) NSString*theBaseUrl;
@@ -41,8 +43,10 @@
 @property (nonatomic,strong) NSMutableArray*arrayItems;
 @property (nonatomic,strong) requestQueue*queue;
 @property (nonatomic,strong) NSMutableArray*sitemap;
-@property (nonatomic,strong) NSMutableArray*imagesArray;
-@property (nonatomic) BOOL itemsLoaded,groupsLoaded,refreshing,sitemapLoaded;
+@property (nonatomic,strong) NSMutableDictionary*pagesDictionary,*imagesDictionary;
+@property (atomic) BOOL itemsLoaded,groupsLoaded,refreshing,sitemapLoaded,longPolling,serverReachable;
+@property (atomic) NSInteger currentlyPolling,currentlyRefreshing;
+@property (nonatomic,strong) NSString*currentPage;
 @property (nonatomic,strong) id<openHABprotocol> delegate;
 
 
@@ -50,25 +54,37 @@
 
 + (openhab*)sharedOpenHAB;
 + (openhab*)deleteSharedOpenHAB;
+-(void)addressIsReacheable;
 -(void)initArrayItems;
 -(void)initSitemap;
+-(void)requestSitemaps:(NSString*)fromServer;// v1.2 get the sitemaps
 -(openhabItem*)getItembyName:(NSString*)name;
 -(void)changeValueofItem:(openhabItem*)item toValue:(NSString*)value;
 -(void)refreshItems;
 -(void)refreshSitemap;
+-(void)refreshPage:(NSString*)page;
+-(void)longPollSitemap:(NSString*)page;
+-(void)cancelPolling;
+-(void)longPollCurrent;
+-(void)cancelRefresh;
 -(void)getImage:(NSString*)theImageName;
 -(void)getImageWithURL:(NSString*)theImageName;
+// v1.2 delete image for charts
+-(void)deleteImage:(NSString*)theImageName;
 @end
 
 @protocol openHABprotocol
-
+@optional
 -(void)itemsLoaded;
 -(void)groupsLoaded;
 -(void)sitemapLoaded;
+-(void)requestSitemapsResponse:(NSArray*)theSitemaps; //V1.2 return the sitemaps.
 -(void)valueOfItemChangeRequested:(openhabItem*)theItem;
 -(void)itemsRefreshed;
 -(void)sitemapRefreshed;
 -(void)imagesRefreshed;
+-(void)pageRefreshed:(commLibrary*)page;
+-(void)longpollDidReceiveData:(commLibrary*)request;
 -(void)requestFailed:(commLibrary*)request withError:(NSError*)error;
 -(void)JSONparseError:(NSString*)parsePhase withError:(NSError*)error;
 -(void)allRequestsFinished;

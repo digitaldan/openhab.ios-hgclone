@@ -15,11 +15,12 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #import "openhabTebleViewCellSelectionDetail.h"
 
 
 @implementation openhabTebleViewCellSelectionDetail
-@synthesize lastTableView,widget;
+@synthesize lastTableView,widget,lastselected;
 
 - (id)initWithStyle:(UITableViewStyle)style
 {
@@ -49,7 +50,7 @@
  
     // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
     // self.navigationItem.rightBarButtonItem = self.editButtonItem;
-	
+	lastselected=-1;
 }
 
 - (void)viewDidUnload
@@ -115,7 +116,18 @@
     }
     
     // Configure the cell...
-    cell.textLabel.text=[[[widget mappings] objectAtIndex:indexPath.row] label];
+
+	NSString*theKey=[[[widget.mappings allKeys]sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)] objectAtIndex:indexPath.row];
+    cell.textLabel.text=[[widget.mappings objectForKey:theKey] label];
+	if ([widget.item.state isEqualToString:[[[widget mappings] objectForKey:theKey] command]])
+	{
+		cell.accessoryType=UITableViewCellAccessoryCheckmark;
+		lastselected=indexPath.row;
+	}
+	else
+	{
+		cell.accessoryType=UITableViewCellAccessoryNone;
+	}
     return cell;
 }
 
@@ -162,21 +174,23 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    // Navigation logic may go here. Create and push another view controller.
-    /*
-     <#DetailViewController#> *detailViewController = [[<#DetailViewController#> alloc] initWithNibName:@"<#Nib name#>" bundle:nil];
-     // ...
-     // Pass the selected object to the new view controller.
-     [self.navigationController pushViewController:detailViewController animated:YES];
-     */
-	
-	// Change the value of the item
-	widget.item.state=[[[widget mappings] objectAtIndex:indexPath.row] command];
+    // Change the value of the item
+	// v1.2 modified
+	if (lastselected>=0) // deselect
+	{
+		NSIndexPath *lastindex=[NSIndexPath indexPathForRow:lastselected inSection:0];
+		[tableView cellForRowAtIndexPath:lastindex].accessoryType=UITableViewCellAccessoryNone;
+	}
+	[tableView deselectRowAtIndexPath:indexPath animated:YES];
+	[tableView cellForRowAtIndexPath:indexPath].accessoryType=UITableViewCellAccessoryCheckmark;
+	lastselected=indexPath.row;
+	NSString*theKey=[[[widget.mappings allKeys] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)] objectAtIndex:indexPath.row];
+	widget.item.state=[[[widget mappings] objectForKey:theKey] command];
 	// Request the modification
 	[[openhab sharedOpenHAB] changeValueofItem:widget.item toValue:widget.item.state];
 	// update tableview
 	[lastTableView reloadData];
-	[self dismissModalViewControllerAnimated:YES];
+	//[self dismissModalViewControllerAnimated:YES];
 }
 
 @end

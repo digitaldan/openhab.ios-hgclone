@@ -15,7 +15,6 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 #import "configuration.h"
 
 @implementation configuration
@@ -77,6 +76,41 @@
     //here add elements to data file and write data to file
     [data setObject:value forKey:dato];
     [data writeToFile: path atomically:YES];
+}
+
+#pragma mark - update things
+
++ (void)updateSettings
+{
+    // Update non existing settings
+    // HACER: ACTUALIZAR RECURSIVAMENTE
+    // Get the old one
+    
+    NSString*path=[configuration inicializaPlist];
+    NSMutableDictionary *diccionarioAntiguo = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
+    
+    // Get the new one
+    
+    NSURL *bundle = [[NSBundle mainBundle] URLForResource:@"data" withExtension:@"plist"];
+    NSData *tmp = [NSData dataWithContentsOfURL:bundle options:NSDataReadingMappedIfSafe error:nil];
+    NSDictionary *diccionarioNuevo = [NSPropertyListSerialization propertyListWithData:tmp options:NSPropertyListImmutable format:nil error:nil];
+    
+    NSLog(@"Diccionario antiguo %@, Diccionario nuevo %@",diccionarioAntiguo,diccionarioNuevo);
+    [diccionarioAntiguo setDictionary:diccionarioNuevo];
+    [diccionarioAntiguo writeToFile:path atomically:YES];
+}
+
++ (BOOL)shouldUpdate
+{
+    NSString*path=[configuration inicializaPlist];
+    NSMutableDictionary *diccionarioAntiguo = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
+    NSString*version=[diccionarioAntiguo objectForKey:@"dictVersion"];
+    
+    NSURL *bundle = [[NSBundle mainBundle] URLForResource:@"data" withExtension:@"plist"];
+    NSData *tmp = [NSData dataWithContentsOfURL:bundle options:NSDataReadingMappedIfSafe error:nil];
+    NSDictionary *diccionarioNuevo = [NSPropertyListSerialization propertyListWithData:tmp options:NSPropertyListImmutable format:nil error:nil];
+    NSString*theNewversion=[diccionarioNuevo objectForKey:@"dictVersion"];
+    return ![theNewversion isEqualToString:version];
 }
 
 @end

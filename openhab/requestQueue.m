@@ -20,17 +20,21 @@
 #import "configuration.h"
 
 @implementation requestQueue
-@synthesize queue,operations,Allpetitions,sizeDownloaded,maxOperations,delegate,theLock;
+@synthesize queue,longPollingQueue,operations,Allpetitions,sizeDownloaded,SerialNumber,maxOperations,delegate,theLock;
 
 -(requestQueue*)init
 {
 	if (!self.queue)
 		self.queue=[NSMutableArray new];
+	if (!self.longPollingQueue)
+		self.longPollingQueue=[NSMutableArray new];
+
 	if (!self.theLock)
 		self.theLock=[NSCondition new];
 	operations=0;
 	Allpetitions=0;
 	sizeDownloaded=0;
+	SerialNumber=0;
 	maxOperations=[(NSNumber*)[configuration readPlist:@"maxConnections"] intValue];
 	NSLog(@"Ops: %i",maxOperations);
 	return self;
@@ -45,6 +49,9 @@
 	commLibrary*c=[commLibrary new];
 	[c setDelegate:self];
 	[c setTag:tag];
+	[c setLongpoll:NO];
+	if (tag==11 ||tag==12)
+		[c setTimeout:2];
 	
 	if (operations < maxOperations)
 	{
@@ -59,6 +66,73 @@
 		[queue addObject:c];
 	}
 }
+
+// v1.2 modified: poll urls WITH operationqueue
+-(NSInteger)doGetUrlWithOperation:(NSURL*)url withTag:(NSInteger)tag
+{
+	commLibrary*c=[commLibrary new];
+	[c setDelegate:self];
+	[c setTag:tag];
+	[c setLongpoll:NO];
+	[c setTimeout:20];
+	SerialNumber++;
+	[c setSerial:SerialNumber];
+	[queue addObject:c];
+	[c doGetOperation:url];
+	return SerialNumber;
+}
+
+// v1.2 modified: longpolling urls
+-(NSInteger)doGetLongPollUrl:(NSURL *)url withTag:(NSInteger)tag
+{
+	commLibrary*c=[commLibrary new];
+	[c setDelegate:self];
+	[c setTag:tag];
+	[c setLongpoll:YES];
+	[c setTimeout:3600];
+	SerialNumber++;
+	[c setSerial:SerialNumber];
+	[longPollingQueue addObject:c];
+	[c doGetLongPolling:url];
+	return SerialNumber;
+}
+
+// v1.2 cancell long poll
+-(void)cancelRequest:(NSInteger)requestSerialNumber
+{
+	for (commLibrary*c in self.longPollingQueue) {
+		if (c.serial==requestSerialNumber)
+		{
+			c.cancelled=YES;
+			[longPollingQueue removeObject:c];
+			[c.TheConnection cancel];
+		}
+	}
+	for (commLibrary*c in self.queue) {
+		if (c.serial==requestSerialNumber)
+		{
+			c.cancelled=YES;
+			[queue removeObject:c];
+			[c.TheConnection cancel];
+		}
+	}
+}
+
+// v1.2 cancell all requests
+-(void)cancelRequests
+{
+	for (commLibrary*c in self.longPollingQueue) {
+			c.cancelled=YES;
+			[longPollingQueue removeObject:c];
+			[c.TheConnection cancel];
+	}
+	for (commLibrary*c in self.queue) {
+			c.cancelled=YES;
+			[queue removeObject:c];
+			[c.TheConnection cancel];
+	}
+}
+
 
 -(void)doPostUrl:(NSURL*)url withValue:(NSString*)value withTag:(NSInteger)tag
 {
@@ -106,6 +180,32 @@
 }
 
 #pragma mark - delegate commLibrary
+
+
+-(void)longPollingrequestFinished:(commLibrary*)com
+{
+	// Save the size
+	
+	sizeDownloaded+=com.responseData.length;
+	// Delete from queue
+	[longPollingQueue removeObject:com];
+	// Tell the delegate that the requestFinished
+	[self.delegate requestinQueueFinished:com];
+
+}
+-
+(void)operationRequestFinished:(commLibrary *)com
+{
+	// Save the size
+	
+	sizeDownloaded+=com.responseData.length;
+	// Delete from queue
+	[queue removeObject:com];
+	// Tell the delegate that the requestFinished
+	[self.delegate requestinQueueFinished:com];
+	
+}
+
 
 -(void)requestFinished:(commLibrary*)com
 {
@@ -162,7 +262,10 @@
 	sizeDownloaded+=com.responseData.length;
 	
 	// Tell the delegate that the requestFinished
-	[self.delegate requestinQueueFinishedwithError:com error:error];
+	
+	// v1.2 Kai asked to be silent at timeouts
+	if ([error code] != 1001)
+		[self.delegate requestinQueueFinishedwithError:com error:error];
 	
 	// If we are done with the queue, tell the delegate
 	if ([self.queue count]+operations==0)

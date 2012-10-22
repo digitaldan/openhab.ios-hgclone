@@ -36,8 +36,16 @@
         UINavigationController *navigationController = [splitViewController.viewControllers objectAtIndex:0];
         splitViewController.delegate = (id)navigationController.topViewController;
 		
+		// v1.2 THis lets us do the swipe. If not, iOS opens the left panel
+		
+		NSString *osVersion = @"5.1";
+		NSString *currOsVersion = [[UIDevice currentDevice] systemVersion];
+		if ([currOsVersion compare:osVersion options:NSNumericSearch] == NSOrderedSame ||
+			[currOsVersion compare:osVersion options:NSNumericSearch] == NSOrderedDescending )
+			splitViewController.presentsWithGesture=NO;
 
     }
+	
 	
 	
 	

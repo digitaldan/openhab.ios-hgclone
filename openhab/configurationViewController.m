@@ -18,7 +18,10 @@
 
 #import "configurationViewController.h"
 #import "configurationTableViewController.h"
+#import "configurationLocalIPViewController.h"
+#import "configurationMapViewController.h"
 #import "configuration.h"
+#import "loginViewController.h"
 
 @interface configurationViewController ()
 @property (strong, nonatomic) UIPopoverController *masterPopoverController;
@@ -27,13 +30,16 @@
 
 @implementation configurationViewController
 @synthesize labelServer = _labelServer;
+@synthesize labelAlternateServer = _labelAlternateServer;
 @synthesize labelSitemap = _labelSitemap;
 @synthesize labelRefresh = _labelRefresh;
 @synthesize labelMaxConnections = _labelMaxConnections;
 @synthesize theUrl = _theUrl;
+@synthesize theAlternateUrl = _theAlternateUrl;
 @synthesize theSitemap = _theSitemap;
 @synthesize refreshTime = _refreshTime;
 @synthesize maxConnections = _maxConnections;
+@synthesize theAuthenticationLabel = _theAuthenticationLabel;
 @synthesize refreshStepper = _refreshStepper;
 @synthesize maxStepper = _maxStepper;
 @synthesize masterPopoverController = _masterPopoverController;
@@ -68,7 +74,7 @@
 	
     // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
     // self.navigationItem.rightBarButtonItem = self.editButtonItem;
-	
+
 }
 
 - (void)viewDidUnload
@@ -80,9 +86,12 @@
     [self setRefreshStepper:nil];
     [self setMaxStepper:nil];
 	[self setLabelServer:nil];
+	[self setLabelAlternateServer:nil];
+	[self setTheAlternateUrl:nil];
 	[self setLabelSitemap:nil];
 	[self setLabelRefresh:nil];
 	[self setLabelMaxConnections:nil];
+	[self setTheAuthenticationLabel:nil];
     [super viewDidUnload];
     // Release any retained subviews of the main view.
     // e.g. self.myOutlet = nil;
@@ -99,7 +108,6 @@
 	
 	self.labelServer.text=NSLocalizedString(@"labelServer", @"labelServer");
 	self.labelRefresh.text=NSLocalizedString(@"labelRefresh", @"labelRefresh");
-	self.labelSitemap.text=NSLocalizedString(@"labelSitemap", @"labelSitemap");
 	self.labelMaxConnections.text=NSLocalizedString(@"labelMaxConnections", @"labelMaxConnections");
     
 	
@@ -109,7 +117,12 @@
 	self.refreshTime.text=[NSString stringWithFormat:@"%@",(NSNumber*)[configuration readPlist:@"refresh"]];
 
     self.maxConnections.text=[NSString stringWithFormat:@"%@",(NSNumber*)[configuration readPlist:@"maxConnections"]];
-  
+	// v1.2 get alternate url
+	self.labelAlternateServer.text=NSLocalizedString(@"labelAlternateServer", @"labelAlternateServer");
+	self.theAlternateUrl.text=[
+						   (NSDictionary*)[configuration readPlist:@"alternateURLs"]
+						  objectForKey:self.theUrl.text];
+	self.theAuthenticationLabel.text=NSLocalizedString(@"theAuthenticationLabel",@"theAuthenticationLabel");
 }
 
 
@@ -158,20 +171,36 @@
 -(void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
 {
 	UINavigationController*nvc=(UINavigationController*)[segue destinationViewController];
-	configurationTableViewController*dvc= (configurationTableViewController*)[nvc topViewController];
 	if ([segue.identifier isEqualToString:@"urlConfigurationSegue"])
 	{
-
+		configurationTableViewController*dvc= (configurationTableViewController*)[nvc topViewController];
 		dvc.navigationItem.title=NSLocalizedString(@"SetUrl", @"SetUrl");
 		dvc.theField=@"BASE_URL";
-	}	
+		dvc.lastViewController=self;
+	}
 	else if ([segue.identifier isEqualToString:@"sitemapConfigurationSegue"])
 	{
-
+		configurationMapViewController*dvc= (configurationMapViewController*)[nvc topViewController];
 		dvc.navigationItem.title=NSLocalizedString(@"SetSitemap", @"SetSitemap");;
 		dvc.theField=@"map";
-	}	
-    dvc.lastViewController=self;
+		dvc.lastViewController=self;
+	}
+	//v1.2 segue for login
+	else if ([segue.identifier isEqualToString:@"loginSegue"])
+	{
+		loginViewController*dvc= (loginViewController*)[nvc topViewController];
+		dvc.server=self.theUrl.text;
+		// no need to save lastview
+	}
+	//v1.2 segue for alternate URL
+	else if ([segue.identifier isEqualToString:@"serverAlternateSegue"])
+	{
+		configurationLocalIPViewController*dvc= (configurationLocalIPViewController*)[nvc topViewController];
+		dvc.navigationItem.title=NSLocalizedString(@"SetUrl", @"SetUrl");
+		dvc.theField=@"BASE_URL";
+		dvc.lastViewController=self;
+	}
+	
 }
 
 - (IBAction)changeRefreshValue:(id)sender {

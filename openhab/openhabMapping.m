@@ -15,6 +15,7 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #import "openhabMapping.h"
 
 @implementation openhabMapping
@@ -25,6 +26,12 @@
 	self.label=[theDictionary valueForKey:@"label"];
 	return self;
 }
+
+-(NSString*)description
+{
+	return [NSString stringWithFormat:@"command: %@, label: %@",self.command,self.label];
+}
+
 -(openhabMapping*)initwithStrings:(NSString*)theCommand label:(NSString*)theLabel
 {
 	return [self initWithDictionary:[NSDictionary dictionaryWithObjectsAndKeys:theLabel,@"label",theCommand, @"command", nil]];

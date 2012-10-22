@@ -17,14 +17,24 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #import <UIKit/UIKit.h>
+#import "bonjourBrowserDelegate.h"
+#import "openhab.h"
 
-@interface configurationTableViewController : UITableViewController <UITextFieldDelegate>
-
-
+@interface configurationTableViewController : UITableViewController <UITextFieldDelegate,bonjourBrowser,openHABprotocol>
+{
+	NSNetServiceBrowser *serviceBrowser;
+	NSNetServiceBrowser *serviceBrowser2;	
+}
+@property (strong,nonatomic)	NSMutableArray*bonjourAddresses;
+@property (strong,nonatomic) bonjourBrowserDelegate*bonjourDelegate;
+@property (strong,nonatomic)	NSNetServiceBrowser *serviceBrowser;
+@property (strong,nonatomic)	NSNetServiceBrowser *serviceBrowser2;
 @property (weak, nonatomic) UITableViewController*lastViewController;
 @property (strong,nonatomic) NSString*theField;
 @property (strong,nonatomic) NSMutableArray *arrayLasts;
 @property (weak, nonatomic) IBOutlet UITextField *theTextField;
+@property (weak, nonatomic) IBOutlet UIBarButtonItem *sitemapButton;
+@property (nonatomic) int lastselected;
 
 - (IBAction)doneButton:(id)sender;
 @end

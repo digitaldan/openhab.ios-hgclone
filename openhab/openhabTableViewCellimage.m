@@ -15,11 +15,22 @@
 //
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 #import "openhabTableViewCellimage.h"
 
 @implementation openhabTableViewCellimage
-@synthesize bigImage;
+@synthesize bigImage,theTimer;
+
+
+// v1.2 Refresh of image
+
+-(void)launchDeletion
+{
+	self.widget.Image=nil;
+	
+	[[openhab sharedOpenHAB] deleteImage:self.widget.imageURL];
+	// lets look for the image and download it
+	[[openhab sharedOpenHAB] getImageWithURL:self.widget.imageURL];
+}
 
 -(void)loadWidget:(openhabWidget *)theWidget
 {
@@ -33,9 +44,17 @@
         self.bigImage.image=theWidget.Image;
         [self.theSpinner stopAnimating];
 		[self.label setHidden:YES];
+		// v1.2 Schedule refresh
+		if (self.widget.refresh>0 && !theTimer)
+		{
+			NSInteger refreshtime=self.widget.refresh/1000;
+			theTimer=[NSTimer scheduledTimerWithTimeInterval:refreshtime target:self selector:@selector(launchDeletion) userInfo:nil repeats:YES];
+		}
     }
     else
     {
+		[self.theSpinner startAnimating];
+		[self.label setHidden:NO];
         // lets look for the image and download it
         [[openhab sharedOpenHAB] getImageWithURL:theWidget.imageURL];
     }

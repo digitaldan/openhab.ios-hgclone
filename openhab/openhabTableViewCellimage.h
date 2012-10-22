@@ -23,4 +23,5 @@
 	__weak IBOutlet UIImageView*bigImage;
 }
 @property (nonatomic,weak) IBOutlet UIImageView*bigImage;
+@property (nonatomic,weak) NSTimer*theTimer;
 @end

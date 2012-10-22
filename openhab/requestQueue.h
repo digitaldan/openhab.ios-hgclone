@@ -23,6 +23,7 @@
 @interface requestQueue : NSObject <commLibraryprotocol>
 {
 	NSMutableArray*queue;
+	NSMutableArray*longPollingQueue;
 	NSInteger operations;
 	NSInteger maxOperations;
 	NSInteger Allpetitions;
@@ -31,17 +32,24 @@
 	id <requestQueueprotocol>delegate;
 	
 }
-@property (nonatomic,strong)NSMutableArray*queue;
+@property (atomic,strong)NSMutableArray*queue;
+@property (atomic,strong)NSMutableArray*longPollingQueue;
 @property (atomic)NSInteger operations;
 @property (atomic)NSInteger maxOperations;
 @property (atomic)NSInteger Allpetitions;
 @property (atomic)NSInteger sizeDownloaded;
+@property (atomic)NSInteger SerialNumber;
 @property (atomic,strong) NSCondition*theLock;
 @property (nonatomic,strong) id <requestQueueprotocol>delegate;
 
 
 -(void)doGetUrl:(NSURL*)url withTag:(NSInteger)tag;
+-(NSInteger)doGetUrlWithOperation:(NSURL*)url withTag:(NSInteger)tag;
+// v1.2 Long-polling urls
+-(int)doGetLongPollUrl:(NSURL*)url withTag:(NSInteger)tag;
 -(void)doPostUrl:(NSURL*)url withValue:(NSString*)value withTag:(NSInteger)tag;
+-(void)cancelRequest:(NSInteger)requestSerialNumber;
+-(void)cancelRequests;
 -(int)operationsInQueue;
 
 @end

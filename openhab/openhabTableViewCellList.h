@@ -21,6 +21,11 @@
 @interface openhabTableViewCellList : openhabTableViewCell
 {
     __weak IBOutlet UISegmentedControl*theControl;
+	__weak IBOutlet UILabel *detailLabel;
+
 }
 @property (nonatomic,weak)IBOutlet UISegmentedControl*theControl;
+@property (nonatomic,weak)IBOutlet UILabel *detailLabel;
+
+@property (nonatomic) BOOL longPressStarted;
 @end

@@ -1,21 +1,31 @@
 /* 
   File.strings
-//  openHAB iOS User Interface
-//  Copyright © 2011 Pablo Romeu
-//
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  openhab
+
+  Created by Pablo Romeu Guallart on 15/12/11.
+  Copyright (c) 2011 spaphone. All rights reserved.
 */
+
+"SitemapEmpty"="Sitemap is empty";
+"SitemapEmptyText"="Please enter or select the sitemap name in the configuration";
+"AuthFailedLocalized"="Authentication failed";
+"dialogAuthFailedLocalized"="Authentication at %@ server as user %@ has failed. Please check your user and password";
+"UnkAuthFailedLocalized"="Unknown authentication failure";
+"UnkdialogAuthFailedLocalized"="There was an unknown authentication failure";
+"LocalizedFavorites"="Favorites";
+"LocalizedBonjour"="Searching for servers...";
+"theAuthenticationLabel"="Authentication";
+"loginLoc"="Login";
+"warningAuthTextLoc"="Keep in mind that this user/password pair will be encrypted in your iOS device.
+
+Each pair user/password is different for each server AND port, i.e. the login for http://192.168.1.1:8080/ is NOT the same as https://192.168.1.1:8443/
+
+Note: The SSL certificates are accepted automatically.";
+"LocalizedAvailableMaps1"="Available sitemaps at %@";
+"labelAlternateServer"="Remote URL";
+
+
+/*-----*/
 
 "labelDonation"="If you like this app, please consider making a donation to the app's programmer";
 "MainLabelDonation"="Donate to help the application's support";
@@ -55,11 +65,10 @@
 "Info"="About";
 "ErrorSitemapConfig"="You have an error in the sitemap configuration";
 "LoadingSitemapUrl2"="Loading URL: %@ sitemap:%@";
-"InfoText"=" © 2011 Pablo Romeu
+"InfoText1"=" openHAB iOS client v%@ 
+© 2011 Pablo Romeu
 
-Full version might be obtained here: http:\/\/itunes.apple.com\/us\/app\/openhab\/id492054521?l=es&ls=1&mt=8
-
-This program is a client for openHAB system which can be found at http:\/\/openhab.org. For support on openHAB please visit openHAB home page.
+This program is a client for openHAB system which can be found at http:\/\/openhab.org. For support on openHAB please visit openHAB home page. For a fast setup guide go to: http://code.google.com/p/openhab/wiki/Setup
 
 The open Home Automation Bus (openHAB) project aims at providing a universal integration platform for all things around home automation.
 
@@ -81,4 +90,5 @@ MPD (Music Player Deamon)
 
 openHAB is OpenSource licensed under GPL v3. You may find the source code at http:\/\/openhab.org
 
-This program uses MBProgressHUD licensed under MIT license by Matej Bukovinski";
+This program uses MBProgressHUD licensed under MIT license by Matej Bukovinski
+and PDKeychainBindings licensed under MIT license by Carl Brown ";

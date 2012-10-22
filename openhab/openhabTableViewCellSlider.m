@@ -19,14 +19,27 @@
 #import "openhabTableViewCellSlider.h"
 
 @implementation openhabTableViewCellSlider
-@synthesize theSlider,times;
+@synthesize detailLabel,theSlider,times,theTimer;
+
 
 -(void)loadWidget:(openhabWidget *)theWidget
 {
     [super loadWidget:theWidget];
 
-	theSlider.value=[theWidget.item.state floatValue];
+	if (!self.sliding)
+	{	// V1.2 Do not change the value if refreshing
+		[theSlider setValue:[theWidget.item.state floatValue]];
+	}
+
+	// v1.2 modified to show data
 	
+	if (theWidget.data)
+	{
+		detailLabel.text=theWidget.data;
+		[detailLabel setHidden:NO];
+	}
+	else
+		[detailLabel setHidden:YES];
 }
 
 -(BOOL)mayBeModified
@@ -34,22 +47,23 @@
 	return YES;
 }
 
+-(void)resetTimes
+{
+	NSLog(@"reset time");
+	times=0;
+}
+
 -(IBAction)startDragging:(id)sender
 {
 	[openhab sharedOpenHAB].refreshing=YES;
-	times=0;
-
+	[[openhab sharedOpenHAB] cancelPolling];
+	self.sliding=YES;
+	times=1;
+	theTimer=[NSTimer scheduledTimerWithTimeInterval:self.widget.sendFrequency target:self selector:@selector(resetTimes) userInfo:nil repeats:NO];
 }
 -(IBAction)stopDragging:(id)sender
 {
-	[openhab sharedOpenHAB].refreshing=NO;
-	// Refresh sitemap and icon
-	[[openhab sharedOpenHAB] refreshSitemap];
-}
-
--(IBAction)changeValue:(id)sender
-{
-    if (times==0 && [sender isKindOfClass:[UISlider class]])
+	if ([sender isKindOfClass:[UISlider class]])
     {
 		NSString*theStringValue=[NSString stringWithFormat:@"%.0f",[theSlider value]];
 		if (theSlider.value==0)
@@ -57,12 +71,26 @@
         NSLog(@"Value changed, %@",theStringValue);
 		self.widget.item.state=theStringValue;
         [[openhab sharedOpenHAB] changeValueofItem:self.widget.item toValue:theStringValue];
-        times=(times+1)%5;
+		times=0;
     }
-	else
-	{
-		times=(times+1)%5;
-	}
+	self.sliding=NO;
+	[openhab sharedOpenHAB].refreshing=NO;
+	[[openhab sharedOpenHAB] longPollCurrent];
+	[[openhab sharedOpenHAB] refreshPage:[openhab sharedOpenHAB].currentPage];
+}
+
+-(IBAction)changeValue:(id)sender
+{
+    if (times==0)
+    {
+		UISlider *newSlider=(UISlider*)sender;
+		NSString*theStringValue=[NSString stringWithFormat:@"%.0f",[newSlider value]];
+		self.widget.item.state=theStringValue;
+		NSLog(@"Value changed, %@",self.widget.item.state);
+        [[openhab sharedOpenHAB] changeValueofItem:self.widget.item toValue:theStringValue];
+        times++;
+		theTimer=[NSTimer scheduledTimerWithTimeInterval:self.widget.sendFrequency target:self selector:@selector(resetTimes) userInfo:nil repeats:NO];
+    }
 }
 
 @end

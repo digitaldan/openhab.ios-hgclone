@@ -17,7 +17,6 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #import "openhabMasterViewController.h"
-
 #import "openhabDetailViewController.h"
 #import "configurationViewController.h"
 
@@ -48,7 +47,7 @@
 	// Do any additional setup after loading the view, typically from a nib.
 	self.detailViewController = (configurationViewController *)[[self.splitViewController.viewControllers lastObject] topViewController];
 	if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) {
-	    [self.tableView selectRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:1] animated:NO scrollPosition:UITableViewScrollPositionMiddle];
+	    [self.tableView selectRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0] animated:NO scrollPosition:UITableViewScrollPositionMiddle];
 	}
 	// Configure title and cells 
 	self.navigationItem.title=NSLocalizedString(@"Master", @"Master");
@@ -151,6 +150,10 @@
 		// Set the widgets and go
 		
         [dvc setMyWidgets:[[openhab sharedOpenHAB] sitemap]];
+		
+		// v1.2 new! Need to put here the linkedPage
+		[dvc setMyPageId:savedMap];
+		
 		//dvc.navigationItem.title=(NSString*)[configuration readPlist:@"map"];
 		dvc.navigationItem.title=NSLocalizedString(@"Loading",@"Loading");
         [[openhab sharedOpenHAB]setDelegate:dvc];
@@ -197,5 +200,11 @@
 	self.thePopover=nil;
 }
 
+// v1.2 Override. iPad should hide the left panel 
+
+-(BOOL)splitViewController:(UISplitViewController *)svc shouldHideViewController:(UIViewController *)vc inOrientation:(UIInterfaceOrientation)orientation
+{
+    return YES;
+}
 
 @end

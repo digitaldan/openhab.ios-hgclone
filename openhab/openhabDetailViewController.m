@@ -27,12 +27,14 @@
 -(void)setProgress:(float)progress withText:(NSString*)text;
 -(void)hideProgressHUD;
 -(void)hideLoad;
+-(void)longpollDidReceiveData:(commLibrary *)request;
+-(void)refreshTableandSitemap;
 
 @end
 
 @implementation openhabDetailViewController
 @synthesize theLoadingView;
-@synthesize loadingLabel,HUD,progressTimer,alert,refreshTimer,loadingSpinner,myWidgets,masterPopoverController = _masterPopoverController;
+@synthesize loadingLabel,HUD,progressTimer,alert,refreshTimer,loadingSpinner,myWidgets,myPageId,masterPopoverController = _masterPopoverController;
 
 - (id)initWithStyle:(UITableViewStyle)style
 {
@@ -42,6 +44,8 @@
         self.refreshTimer=nil;
         self.HUD=nil;
         self.alert=nil;
+        // CHANGE v1.1 manualRefresh to NOT to show errors to user in auto refresh
+        shouldNotifyUser=YES;
     }
     return self;
 }
@@ -66,25 +70,68 @@
     // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
     // self.navigationItem.rightBarButtonItem = self.editButtonItem;
     // Load openhab
-    
-	openhab*oh=[openhab sharedOpenHAB];
-    self.loadingLabel.text=[NSString stringWithFormat:NSLocalizedString(@"LoadingSitemapUrl2", @"LoadingSitemapUrl2"),[configuration readPlist:@"BASE_URL"],[configuration readPlist:@"map"]];
-    if (oh.delegate!=self) {
-        [oh setDelegate:self];
-    }
-    if (!oh.sitemapLoaded)
-    {
-        [self initProgressHUD:NSLocalizedString(@"Loading",@"Loading")];
-		[HUD setDetailsLabelText:NSLocalizedString(@"LoadingItems",@"LoadingItems")];
-        [oh initSitemap];
-    }
-    else
-    {
-        [self.loadingLabel setHidden:YES];
-        [self.loadingSpinner setHidden:YES];
-        [self.theLoadingView setHidden:YES];
-        //[oh changeValueofItem:[[oh arrayItems] objectAtIndex:1] toValue:@"ON"];
-    }
+	
+    // v1.2 modified. Present alert select sitemap
+	if ([(NSString*)[configuration readPlist:@"map"] isEqualToString:@""])
+	{
+		UIAlertView*av=[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"SitemapEmpty", @"SitemapEmpty") message:NSLocalizedString(@"SitemapEmptyText", @"SitemapEmptyText")  delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles: nil];
+		[av show];
+	}
+	else
+	{
+		if ([openhab sharedOpenHAB].delegate!=self) {
+			[[openhab sharedOpenHAB] setDelegate:self];
+		}
+	
+		
+		if (![openhab sharedOpenHAB].serverReachable)
+		{
+			[[openhab sharedOpenHAB] addressIsReacheable];
+		}
+		//openhab*oh=[openhab sharedOpenHAB];
+		self.loadingLabel.text=[NSString stringWithFormat:NSLocalizedString(@"LoadingSitemapUrl2", @"LoadingSitemapUrl2"),[configuration readPlist:@"BASE_URL"],[configuration readPlist:@"map"]];
+		
+		
+		// CHANGE v1.1 to get alerts ONLY on manual things
+		shouldNotifyUser=YES;
+		
+		if (![openhab sharedOpenHAB].sitemapLoaded)
+		{
+			//v1.2 Load title
+			[self initProgressHUD:NSLocalizedString(@"Loading",@"Loading")];
+			[HUD setDetailsLabelText:NSLocalizedString((NSString*)[configuration readPlist:@"BASE_URL"],@"Locating Server")];
+			
+			[self.navigationItem setTitle:NSLocalizedString(@"Loading",@"Loading")];
+			// v1.2 wait for server to become reacheable
+			[self.navigationItem.rightBarButtonItem setEnabled:NO];
+			dispatch_async(dispatch_get_global_queue(0, 0),
+						   ^(void) {
+							   // this goes in background
+							
+							   while (![openhab sharedOpenHAB].serverReachable) {
+								   sleep(1);
+							   }
+							   dispatch_sync(dispatch_get_main_queue(),
+											 ^(void) {
+												 
+												 // main thread
+												 [HUD setDetailsLabelText:NSLocalizedString(@"LoadingItems",@"LoadingItems")];
+												 [[openhab sharedOpenHAB] initSitemap];
+												 
+											 });
+							   
+						   });
+		}
+		else
+		{
+			[self.loadingLabel setHidden:YES];
+			[self.loadingSpinner setHidden:YES];
+			[self.theLoadingView setHidden:YES];
+			
+			
+		}
+	}
+
 }
 
 - (void)viewDidUnload
@@ -103,20 +150,39 @@
     [super viewWillAppear:animated];
 	if (self.masterPopoverController != nil) {
         [self.masterPopoverController dismissPopoverAnimated:YES];
-    } 
+    }
+
 	// If it is not loaded, move
-	if (![openhab sharedOpenHAB].itemsLoaded) {
+	if (![openhab sharedOpenHAB].sitemapLoaded) {
+
 		[self.loadingLabel setHidden:NO];
 		[self.loadingSpinner setHidden:NO];
 		[self.theLoadingView setHidden:NO];
 	}
     
     // If sitemap is loaded, set the refresh
+    
     if ([openhab sharedOpenHAB].sitemap && self.refreshTimer==nil)
         [self enableRefresh];
 	if ([openhab sharedOpenHAB].delegate!=self)
 	{
 		[[openhab sharedOpenHAB] setDelegate:self];
+	}
+	//v1.2 long-poll sitemap if not doing already
+	if ([openhab sharedOpenHAB].sitemap && ![openhab sharedOpenHAB].longPolling && self.myPageId)
+	{
+		
+		[[openhab sharedOpenHAB] longPollSitemap:self.myPageId];
+	}
+	// v1.2 should update sitemap ONLY if it is not already refreshing
+	if ([openhab sharedOpenHAB].sitemapLoaded && ![openhab sharedOpenHAB].refreshing)
+	{
+		[self refreshTableandSitemap];
+	}
+	else
+	{
+		[self.navigationItem.rightBarButtonItem setEnabled:YES];
+		NSLog(@"Not refreshin, already doing");
 	}
 }
 
@@ -129,6 +195,14 @@
 {
     // Disable the refresh whan we will disappear
     [self disableRefresh];
+	// V1.2 disable polling and refresh:
+	[[openhab sharedOpenHAB] cancelPolling];
+	[[openhab sharedOpenHAB] cancelRefresh];
+	
+	// Cancelling anything
+	NSLog(@"Cancell all requests NOW!");
+	[[openhab sharedOpenHAB].queue cancelRequests];
+	
     [super viewWillDisappear:animated];
 }
 
@@ -215,7 +289,7 @@
 
 -(openhabTableViewCell*)recycleCell:(NSString*)type withWidget:(openhabWidget*)widget
 {
-    // itemTypes: 1 Switch | 2 Selection | 3 Slider | 4 List
+    // itemTypes: 1 Switch | 2 Selection | 3 Slider | 4 List | 11 setpoint | 12 Webview |14 Video | 16 Chart
     //groupWidgettypes itemTypes: 5 Text | 6 Group | 7 Image | 8 Frame
     
     openhabTableViewCell *cell= [self.tableView dequeueReusableCellWithIdentifier:type];
@@ -259,6 +333,25 @@
             break;
         case 8:
             break;
+		case 11:
+            if (cell == nil) {
+                cell = [[openhabTableViewCellSetpoint alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:type];
+            }
+		case 12:
+			if (cell == nil) {
+                cell = [[openhabTableViewCellWebView alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:type];
+            }
+            break;
+		case 14:
+			if (cell == nil) {
+                cell = [[openhabTableViewCellVideo alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:type];
+            }
+            break;
+		case 16:
+			if (cell == nil) {
+                cell = [[openhabTableViewCellChart alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:type];
+            }
+            break;
         default:
             if (cell == nil) {
                 cell = [[openhabTableViewCelltext alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:type];
@@ -273,31 +366,73 @@
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
 	openhabWidget*widget=[[self WidgetsInSection:indexPath.section] objectAtIndex:indexPath.row];
-	CGFloat theHeight=44;
+	CGFloat theHeight=44; // Standard cell height
 
-	if (widget.Image!=nil)
+	if (widget.Image!=nil) // This is an image. We should check What is bigger in image
 	{
+		float aspectRatio=widget.Image.size.height/widget.Image.size.width;
 		CGFloat theWidth;
 		if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone) 
 		{
 			if (UIInterfaceOrientationIsPortrait([UIApplication sharedApplication].statusBarOrientation)) {
-				theWidth=270;
+				theWidth=300;
 			}
 			else
 			{
-				theWidth=430;
+				theWidth=460;
 			}
 		}
 		else
-			theWidth=595;
+		if (UIInterfaceOrientationIsPortrait([UIApplication sharedApplication].statusBarOrientation)) {
+				theWidth=678;
+		}
+		else
+		{
+			theWidth=934;
+		}
+
+		//theHeight=theWidth*[widget.Image size].height/[widget.Image size].width;
+		//if ([widget.Image size].height>theHeight)
+		//	theHeight=[widget.Image size].height;
+		theHeight=theWidth*aspectRatio;
+	}
+	else if (widget.widgetType==12 || widget.widgetType==14 ) // V1.2 this is a webview or video
+	{
+
+		CGFloat theWidth;
+		if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
+		{
+			if (UIInterfaceOrientationIsPortrait([UIApplication sharedApplication].statusBarOrientation)) {
+				theWidth=300;
+				if (widget.height==0) // Size 4:3 by default
+					widget.height=3*theWidth/(4*44);
+			}
+			else
+			{
+				theWidth=460;
+				if (widget.height==0) // Size 4:3 by default
+					widget.height=10*theWidth/(16*44);
+			}
+		}
+		else if (UIInterfaceOrientationIsPortrait([UIApplication sharedApplication].statusBarOrientation)) {
+			theWidth=678;
+			if (widget.height==0) // Size 4:3 by default
+				widget.height=10*theWidth/(16*44);
+		}
+		else
+		{
+			theWidth=934;
+			if (widget.height==0) // Size 4:3 by default
+				widget.height=10*theWidth/(16*44);
+		}
 		
-		theHeight=theWidth*[widget.Image size].height/[widget.Image size].width;
+		theHeight=widget.height*44;
 	}
 	return theHeight;
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    // itemTypes: 1 Switch | 2 Selection | 3 Slider | 4 List
+    // itemTypes: 1 Switch | 2 Selection | 3 Slider | 4 List | 11 setpoint | 12 webview |14 video | 16 chart
     //groupWidgettypes itemTypes: 5 Text | 6 Group | 7 Image | 8 Frame
     
     openhabTableViewCell *cell;
@@ -362,13 +497,24 @@
 		case 10:
 			cell=[self recycleCell:@"cellImageNoChildren" withWidget:widget];
             break;
+		case 11:
+			cell=[self recycleCell:@"cellSetpoint" withWidget:widget];
+			break;
+		case 12:
+			cell=[self recycleCell:@"cellWebView" withWidget:widget];
+			break;
+		case 14:
+			cell=[self recycleCell:@"cellVideo" withWidget:widget];
+			break;
+		case 16:
+			cell=[self recycleCell:@"cellChart" withWidget:widget];
+			break;
         default:
             NSLog(@"ERROR: Unknown type of widget,%@",widget);
             cell=[self recycleCell:@"cellText" withWidget:widget];
             break;
     }
-    
-    return cell;
+	return cell;
 }
 
 -(void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
@@ -378,14 +524,17 @@
 		openhabDetailViewController*dvc=[segue destinationViewController];
 		openhabTableViewCell*selectedCell=(openhabTableViewCell*)sender;
 		dvc.myWidgets=selectedCell.widget.widgets;
+		// v1.2 Add the linkedPage
+		dvc.myPageId=selectedCell.widget.linkedPage;
+
 		openhab* sharedOH=[openhab sharedOpenHAB];
 		[sharedOH setDelegate:dvc];
 		dvc.navigationItem.title=[[selectedCell label] text];
 	}
-	else if ([[segue destinationViewController] isKindOfClass:[UINavigationController class]] &&
-			 [[[segue destinationViewController] topViewController] isKindOfClass:[openhabTebleViewCellSelectionDetail class]])
+	// v1.2 changed to a push segue
+	else if ([[segue destinationViewController] isKindOfClass:[openhabTebleViewCellSelectionDetail class]])
 	{
-		openhabTebleViewCellSelectionDetail*dvc=(openhabTebleViewCellSelectionDetail*)[(UINavigationController*)[segue destinationViewController]topViewController];
+		openhabTebleViewCellSelectionDetail*dvc=(openhabTebleViewCellSelectionDetail*)[segue destinationViewController];
 		dvc.lastTableView=self.tableView;
 		openhabTableViewCell*selectedCell=(openhabTableViewCell*)sender;
 		dvc.widget=selectedCell.widget;
@@ -404,9 +553,20 @@
 {
 	if ([openhab sharedOpenHAB].sitemapLoaded && ![openhab sharedOpenHAB].refreshing)
 	{
-		self.navigationItem.title=[self.navigationItem.title stringByAppendingFormat:@"...%@",NSLocalizedString(@"Refreshing", @"Refreshing")];
-		[[openhab sharedOpenHAB] refreshItems];
-		[[openhab sharedOpenHAB] refreshSitemap];
+        shouldNotifyUser=NO;
+		// CHANGE v1.1
+        //self.navigationItem.title=[self.navigationItem.title stringByAppendingFormat:@"...%@",NSLocalizedString(@"Refreshing", @"Refreshing")];
+        [self.navigationItem.rightBarButtonItem setEnabled:NO];
+		if (!self.myPageId)
+		{
+			[[openhab sharedOpenHAB] refreshItems];
+			[[openhab sharedOpenHAB] refreshSitemap];
+		}
+		else
+		{
+			NSLog(@"Refreshing page: %@",self.myPageId);
+			[[openhab sharedOpenHAB] refreshPage:self.myPageId];
+		}
 	}
 }
 
@@ -414,6 +574,8 @@
 {
 	if (![openhab sharedOpenHAB].refreshing)
 	{
+        // CHANGE v1.1 manualRefresh to NOT to show errors to user in auto refresh
+        shouldNotifyUser=YES;
 		[self initProgressHUD:NSLocalizedString(@"Refreshing", @"Refreshing")];
 		[self refreshTableandSitemap];
 	}
@@ -467,8 +629,14 @@
     [self.loadingSpinner setHidden:YES];
     [self.theLoadingView setHidden:YES];
     
+	// v1.2 We should then add linkedpage to this to main page
     if (self.myWidgets==nil)
-        self.myWidgets=[[openhab sharedOpenHAB] sitemap];
+	{
+
+		self.myWidgets=[[openhab sharedOpenHAB] sitemap];
+		self.myPageId=[[openhab sharedOpenHAB] theMap];
+	}
+	
     [self setProgress:(3.0/3.0) withText:NSLocalizedString(@"SitemapLoaded",@"SitemapLoaded")];
 	
 	// NEW: CHANGE TITLE
@@ -487,7 +655,6 @@
 -(void)valueOfItemChangeRequested:(openhabItem*)theItem
 {
     NSLog(@"Value of %@ changed to %@!",theItem.name,theItem.state);
-	// [[openhab sharedOpenHAB] refreshSitemap];
 }
 -(void)itemsRefreshed
 {
@@ -503,14 +670,21 @@
     if ([openhab sharedOpenHAB].sitemap && self.refreshTimer==nil)
         [self enableRefresh];
     [self setProgress:(2.0/2.0) withText:@"Sitemap Refreshed"];
-	NSArray*temp=[self.navigationItem.title componentsSeparatedByString:@"."];
-	if ([temp count]>1)
-	{
-		self.navigationItem.title=[temp objectAtIndex:0];
-	}
+    
+    // CHANGE v1.1 no refresh in title but enable refresh button
+    
+//	NSArray*temp=[self.navigationItem.title componentsSeparatedByString:@"."];
+//	if ([temp count]>1)
+//	{
+//		self.navigationItem.title=[temp objectAtIndex:0];
+//	}
+    
+    [self.navigationItem.rightBarButtonItem setEnabled:YES];
 	if (HUD!=nil && ([[openhab sharedOpenHAB].queue operations]+[[openhab sharedOpenHAB].queue operationsInQueue])<=0)
         [self hideProgressHUD];
     [self.tableView reloadData];
+    // CHANGE v1.1 Should notify
+    shouldNotifyUser=YES;
 }
 -(void)imagesRefreshed
 {
@@ -520,15 +694,40 @@
     if (a==0)
         a++;
     [self setProgress:(1/a) withText:[NSString stringWithFormat:NSLocalizedString(@"ImageRefreshed1",@"ItemsRefreshed"),a]];
-	NSLog(@"Images refreshed, left %.0f",a);
+	//NSLog(@"Images refreshed, left %.0f",a);
     [self.tableView reloadData];
 }
+
+// v1.2 Start again long polling
+-(void)longpollDidReceiveData:(commLibrary *)request
+{
+	NSLog(@"received data. Longpoll Again");
+	[self.tableView reloadData];
+	//v1.2 long-poll sitemap if not doing already
+	if ([openhab sharedOpenHAB].sitemap && ![openhab sharedOpenHAB].longPolling && self.myPageId)
+	{
+		
+		[[openhab sharedOpenHAB] longPollSitemap:self.myPageId];
+	}
+}
+
+// v1.2 Start again long polling
+-(void)pageRefreshed:(commLibrary *)page
+{
+	NSLog(@"received data from refresh");
+	[self.navigationItem.rightBarButtonItem setEnabled:YES];
+	if (HUD!=nil)
+        [self hideProgressHUD];
+    [self.tableView reloadData];
+    shouldNotifyUser=YES;
+}
+
 -(void)requestFailed:(commLibrary*)request withError:(NSError*)error
 {
     NSLog(@"ERROR: Request %@ failed with error: %@",request,error);
 	
 	[self hideLoad];
-    if (alert==nil) {
+    if (alert==nil && shouldNotifyUser) {
         alert=[[UIAlertView alloc] initWithTitle:@"Error" message:error.localizedDescription delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil];
         [alert show];
     }
@@ -539,7 +738,7 @@
 	
 	[self hideLoad];
     NSLog(@"ERROR: JSON parse %@ failed with error: %@",parsePhase,error);
-    if (alert==nil) {
+    if (alert==nil && shouldNotifyUser) {
         alert=[[UIAlertView alloc] initWithTitle:@"Error parsing Response" message:[NSString stringWithFormat:NSLocalizedString(@"ParserFormat2",@"ParserFormat2"),parsePhase,error.localizedDescription] delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil];
         [alert show];
     }
@@ -547,9 +746,16 @@
 
 -(void)allRequestsFinished
 {
-    if (HUD!=nil && ([[openhab sharedOpenHAB].queue operations]+[[openhab sharedOpenHAB].queue operationsInQueue])<=0)
+    if ([openhab sharedOpenHAB].sitemapLoaded && HUD!=nil && ([[openhab sharedOpenHAB].queue operations]+[[openhab sharedOpenHAB].queue operationsInQueue])<=0)
         [self hideProgressHUD];
     NSLog(@"Request queue empty");
+
+	//v1.2 long-poll sitemap if not doing already
+	if ([openhab sharedOpenHAB].sitemap && ![openhab sharedOpenHAB].longPolling && self.myPageId)
+	{
+		
+		[[openhab sharedOpenHAB] longPollSitemap:self.myPageId];
+	}
 }
 
 #pragma mark - progresshud
@@ -561,11 +767,16 @@
 	[self.loadingLabel setHidden:YES];
 	[self.loadingSpinner setHidden:YES];
 	[self.theLoadingView setHidden:YES];
-    NSArray*temp=[self.navigationItem.title componentsSeparatedByString:@"."];
-	if ([temp count]>1)
-	{
-		self.navigationItem.title=[temp objectAtIndex:0];
-	}
+    
+    // CHANGE v1.1 no refresh in title and enable button
+//    NSArray*temp=[self.navigationItem.title componentsSeparatedByString:@"."];
+//	if ([temp count]>1)
+//	{
+//		self.navigationItem.title=[temp objectAtIndex:0];
+//	}
+    
+    [self.navigationItem.rightBarButtonItem setEnabled:YES];
+    [self.navigationItem.leftBarButtonItem setEnabled:YES];
     [self hideProgressHUD];
 }
 
@@ -584,10 +795,12 @@
     [HUD setMode:MBProgressHUDModeIndeterminate];
     [HUD setLabelText:text];
 	[HUD setTaskInProgress:YES];
-	[HUD setGraceTime:1.0];
+	[HUD setGraceTime:0.5];
     [self.navigationController.view addSubview:HUD];
 	self.progressTimer=[NSTimer scheduledTimerWithTimeInterval:0.1 target:self selector:@selector(goProgress) userInfo:nil repeats:YES];
     [HUD show:YES];
+	// v1.2 Hide after 30 seconds for sure
+	[HUD hide:YES afterDelay:30.0];
 }
 
 
